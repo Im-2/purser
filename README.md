@@ -8,7 +8,7 @@ Spending firewall for AI agents on PayPal. Agents get a PayPal account; Purser h
 
     pnpm install
     copy .env.example .env      # then fill in values (never commit .env)
-    pnpm dev                    # server on :8787, web on :5173
+    pnpm dev                    # server on :8799, web on :5173
     pnpm test
     pnpm typecheck
 

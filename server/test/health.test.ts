@@ -5,7 +5,7 @@ import { loadConfig } from "../src/config.js";
 describe("config", () => {
   it("applies defaults", () => {
     const c = loadConfig({});
-    expect(c.PORT).toBe(8787);
+    expect(c.PORT).toBe(8799);
     expect(c.PAYPAL_ENV).toBe("sandbox");
   });
 

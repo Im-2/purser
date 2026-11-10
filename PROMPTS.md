@@ -127,7 +127,7 @@ Build the Purser gateway as an MCP server over Streamable HTTP mounted at /mcp i
 7. Emit internal events on an in-process event bus (attempt created, decision made) so SSE can consume them in prompt 6.
 8. Integration tests: spin up the gateway in-process with a mocked upstream and verify a happy path payout, a cap deny, an unknown tool deny, a frozen agent deny, and that reason/source are stripped before forwarding.
 
-Then write a tiny CLI script (pnpm --filter server mcp:try) that connects as an MCP client to http://localhost:8787/mcp with the seeded key, lists tools, and performs the happy path payout of $120 to the allowlisted Acme email.
+Then write a tiny CLI script (pnpm --filter server mcp:try) that connects as an MCP client to http://127.0.0.1:8799/mcp with the seeded key, lists tools, and performs the happy path payout of $120 to the allowlisted Acme email.
 
 Done when: the CLI shows PayPal tools plus Purser tools, the happy path payout really executes in the sandbox and is recorded, and a $9,999 payout is denied. Commit.
 ~~~

@@ -243,8 +243,8 @@ Pages:
     ANTHROPIC_API_KEY=
     PURSER_MODEL=claude-sonnet-5-5      # verify the model string is valid; make it configurable
     PURSER_ADMIN_TOKEN=
-    PUBLIC_URL=http://localhost:8787
-    PORT=8787
+    PUBLIC_URL=http://127.0.0.1:8799
+    PORT=8799
     DATABASE_PATH=./data/purser.db
     TELEGRAM_BOT_TOKEN=
     TELEGRAM_CHAT_ID=
