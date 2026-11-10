@@ -19,6 +19,7 @@ export const EnvSchema = z.object({
   DATABASE_PATH: z.preprocess(emptyToUndef, z.string().default("./data/purser.db")),
   TELEGRAM_BOT_TOKEN: optStr,
   TELEGRAM_CHAT_ID: optStr,
+  AGENT_API_KEY: optStr,
   LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
 });
 

@@ -1,11 +1,8 @@
 import { loadConfig } from "./config.js";
+import { loadDotEnv } from "./env.js";
 import { buildApp } from "./app.js";
 
-try {
-  process.loadEnvFile?.(); // Node 20.12+/21.7+: load .env from the working directory
-} catch {
-  // no .env file; rely on the real environment
-}
+loadDotEnv();
 
 const config = loadConfig();
 const app = buildApp(config);
