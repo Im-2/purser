@@ -8,9 +8,11 @@
                     "start":  "tsx src/index.ts",
                     "typecheck":  "tsc -p tsconfig.json",
                     "test":  "vitest run",
-                    "seed":  "tsx src/seed.ts"
+                    "seed":  "tsx src/seed.ts",
+                    "smoke:paypal":  "tsx src/smoke-paypal.ts"
                 },
     "dependencies":  {
+                         "@modelcontextprotocol/sdk":  "^1.32.2",
                          "@purser/shared":  "workspace:*",
                          "better-sqlite3":  "^13.0.3",
                          "fastify":  "^5.12.8",
