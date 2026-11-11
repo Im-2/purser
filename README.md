@@ -297,9 +297,7 @@ replays are ignored. Handled: `PAYMENT.PAYOUTS-ITEM.{SUCCEEDED,FAILED,BLOCKED,HE
 (plus `PAYMENT.PAYOUTS-ITEM.DENIED`, which is not in PayPal's current list but appears in older docs). Payouts are matched
 through `sender_item_id` (Purser sets it to the attempt id) or the stored batch id.
 
-> **Live signature verification is still pending deployment.** PayPal can only call a public URL, so the signature path is
-> covered by tests with a mocked verification endpoint. After deploying, set `PAYPAL_WEBHOOK_ID` and register
-> `https://<your-host>/webhooks/paypal` in the PayPal developer dashboard.
+> **Verified on the hosted demo.** On the Render deployment a real $5 sandbox payout through `purser_payout` produced a real `PAYMENT.PAYOUTS-ITEM.SUCCEEDED` webhook that passed PayPal's `verify-webhook-signature` check and was matched to its ledger row (no finding). Locally, PayPal cannot reach `localhost`, so the signature path is also covered by tests with a mocked verification endpoint. To enable it on your own deployment, set `PAYPAL_WEBHOOK_ID` and register `https://<your-host>/webhooks/paypal` for your sandbox app.
 
 **Without a public URL** use the dev-only simulator (not registered when `NODE_ENV=production`; it skips signature checks):
 
