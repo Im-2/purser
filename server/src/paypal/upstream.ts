@@ -149,3 +149,20 @@ export function callUpstreamTool(upstream: UpstreamClient, name: string, args: R
 export function resultText(r: UpstreamResult): string {
   return (r.content ?? []).map((c) => (c.type === "text" && typeof c.text === "string" ? c.text : "")).join("\n");
 }
+
+/** Used when PayPal credentials are missing: every call fails closed with a clear error. */
+export class DisabledUpstream implements UpstreamClient {
+  private fail(): never {
+    throw new UpstreamError("Upstream PayPal MCP is disabled (PayPal credentials are not configured)");
+  }
+  async start(): Promise<UpstreamTool[]> {
+    return this.fail();
+  }
+  async listTools(): Promise<UpstreamTool[]> {
+    return [];
+  }
+  async callTool(): Promise<UpstreamResult> {
+    return this.fail();
+  }
+  async close(): Promise<void> {}
+}

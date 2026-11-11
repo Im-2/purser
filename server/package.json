@@ -9,7 +9,8 @@
                     "typecheck":  "tsc -p tsconfig.json",
                     "test":  "vitest run",
                     "seed":  "tsx src/seed.ts",
-                    "smoke:paypal":  "tsx src/smoke-paypal.ts"
+                    "smoke:paypal":  "tsx src/smoke-paypal.ts",
+                    "mcp:try":  "tsx src/mcp-try.ts"
                 },
     "dependencies":  {
                          "@modelcontextprotocol/sdk":  "^1.32.2",
