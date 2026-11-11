@@ -1,0 +1,66 @@
+# Render Blueprint: ONE web service. Fastify serves the MCP gateway (/mcp), the admin API (/api), the PayPal webhook receiver
+# (/webhooks) and the built dashboard (/). No secret is stored in this file: every secret is `sync: false`, so Render asks for it
+# in the dashboard (paste them all at once with "Add from .env", using the git-ignored render.env from `pnpm render:env`).
+#
+# The instance disk is EPHEMERAL: it is wiped on every restart and spin-down. That is by design here. On boot the server
+# migrates and seeds an empty database (agent from AGENT_API_KEY, two vendors, default policy) and loads the shipped AI verdict
+# cache from server/seed/ai-verdicts.json, so the demo works after a cold start. Approvals, attempts and findings do not persist.
+services:
+  - type: web
+    name: purser
+    runtime: node
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    # Dev dependencies are needed to build the dashboard (vite, tsc) even though NODE_ENV=production is set.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
+    startCommand: pnpm --filter @purser/server start
+    envVars:
+      # ---- non-secret settings ----
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production # disables /api/dev/simulate-webhook, locks CORS to PUBLIC_URL
+      - key: PAYPAL_ENV
+        value: sandbox # sandbox only; the server refuses anything else
+      - key: UPSTREAM_MODE
+        value: stdio # the pinned @paypal/mcp installed at build time, started with node (no npx, no download at boot)
+      - key: AI_MODE
+        value: live # cache hits (the shipped verdicts) never call the model; a miss does
+      - key: AI_CACHE_TTL_SEC
+        value: "31536000"
+      - key: LLM_PROVIDER
+        value: openai_compat
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_REASONING_EFFORT
+        value: low
+      - key: DATABASE_PATH
+        value: ./data/purser.db
+      - key: LOG_LEVEL
+        value: info
+      # PUBLIC_URL is intentionally NOT set: the server falls back to RENDER_EXTERNAL_URL, which Render fills in with the
+      # service's real URL. Set PUBLIC_URL only if you add a custom domain.
+
+      # ---- secrets and account details: asked for in the Render dashboard, never committed ----
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PURSER_ADMIN_TOKEN
+        sync: false
+      - key: AGENT_API_KEY
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: BUSINESS_EMAIL
+        sync: false
+      - key: VENDOR_ACME_EMAIL
+        sync: false
+      - key: VENDOR_NORTHWIND_EMAIL
+        sync: false
+      # Added after the first deploy, once the webhook is registered for the live URL.
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false

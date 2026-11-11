@@ -50,6 +50,10 @@ export interface StdioUpstreamOptions {
   /** Restart the child when the token has less than this much life left. Default 5 minutes. */
   restartBeforeExpiryMs?: number;
   platform?: string;
+  /** Override the spawn command (for example node plus the installed @paypal/mcp entry point). Default: npx -y <packageName>. */
+  command?: string;
+  /** Arguments for `command`. Used only together with `command`; toolsArgs are appended. */
+  commandArgs?: string[];
   /** Called with the discovered tool list after each (re)start, e.g. to cache it in kv. */
   onTools?: (tools: UpstreamTool[]) => void;
   connectTimeoutMs?: number;
@@ -88,8 +92,8 @@ export class StdioUpstream implements UpstreamClient {
     this.stderrBuf = "";
 
     const transport = new StdioClientTransport({
-      command: npxCommand(this.o.platform),
-      args: ["-y", this.o.packageName ?? "@paypal/mcp", ...(this.o.toolsArgs ?? ["--tools=all"])],
+      command: this.o.command ?? npxCommand(this.o.platform),
+      args: this.o.command ? [...(this.o.commandArgs ?? []), ...(this.o.toolsArgs ?? ["--tools=all"])] : ["-y", this.o.packageName ?? "@paypal/mcp", ...(this.o.toolsArgs ?? ["--tools=all"])],
       env: { ...getDefaultEnvironment(), PAYPAL_ACCESS_TOKEN: tok.token, PAYPAL_ENVIRONMENT: "SANDBOX" },
       stderr: "pipe",
     });

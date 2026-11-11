@@ -10,6 +10,7 @@ import { createReviewer } from "./ai/reviewer.js";
 import { createPipelineHooks } from "./ai/hook.js";
 import { startApprovalSweeper } from "./approvals/service.js";
 import { createDemoRunner } from "./admin/demo-run.js";
+import { ensureSeeded, loadVerdictSeed } from "./bootstrap.js";
 import { makeLookalike } from "@purser/shared/lookalike";
 import { SEEDED_AGENT_ID } from "./policy/defaults.js";
 import { DisabledUpstream, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
@@ -18,11 +19,15 @@ loadDotEnv();
 
 const config = loadConfig();
 const repos = createRepos(openDb(resolveDbPath(config.DATABASE_PATH)));
+
+// Ephemeral disks (Render) come back empty after every restart: seed the demo world and the shipped AI verdicts if so.
+const boot = ensureSeeded(repos, { acme: config.VENDOR_ACME_EMAIL, northwind: config.VENDOR_NORTHWIND_EMAIL, agentKey: config.AGENT_API_KEY });
+const verdictSeed = loadVerdictSeed(repos);
 const bus = createEventBus();
 
 // PayPal is optional at boot so /health works without credentials; money tools then fail closed.
 const paypal = config.PAYPAL_CLIENT_ID && config.PAYPAL_CLIENT_SECRET ? createPayPalClient(config) : null;
-const upstream: UpstreamClient = paypal ? createUpstream(paypal, repos) : new DisabledUpstream();
+const upstream: UpstreamClient = paypal && config.UPSTREAM_MODE !== "off" ? createUpstream(paypal, repos, config.UPSTREAM_MODE) : new DisabledUpstream();
 
 // AI layer: one provider-agnostic client shared by the reviewer and the policy compiler.
 const llm = createLlmClient(config);
@@ -66,6 +71,10 @@ const app = buildApp(config, {
 // Background sweeper: marks approvals past their expiry as expired and closes their attempts.
 const stopSweeper = startApprovalSweeper(gateway, 30_000);
 
+if (boot.seeded) app.log.info("empty database: seeded the demo agent, two vendors and the default policy");
+else if (boot.reason) app.log.warn(`not seeded: ${boot.reason}`);
+if (verdictSeed.added > 0) app.log.info(`loaded ${verdictSeed.added} shipped AI verdicts into the cache`);
+app.log.info(`upstream PayPal MCP mode: ${config.UPSTREAM_MODE}`);
 app.log.info(`AI layer: ${describeLlm(config)}, mode=${config.AI_MODE}, verdict cache ttl=${config.AI_CACHE_TTL_SEC}s`);
 if (!llm) app.log.warn("No LLM configured: the AI reviewer will fail closed (escalate) and policy compile is unavailable");
 if (!config.PURSER_ADMIN_TOKEN) app.log.warn("PURSER_ADMIN_TOKEN is not set: the admin API is disabled");

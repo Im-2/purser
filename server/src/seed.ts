@@ -5,7 +5,7 @@ import { loadConfig } from "./config.js";
 import { loadDotEnv, repoRoot, resolveDbPath } from "./env.js";
 import { openDb } from "./db/index.js";
 import { createRepos } from "./db/repos.js";
-import { defaultPolicy } from "./policy/defaults.js";
+import { seedDemoWorld } from "./bootstrap.js";
 
 // Usage: pnpm --filter @purser/server seed [--reset] [--write-env]
 //   --reset      wipe seeded data and recreate (a new API key is issued)
@@ -51,15 +51,7 @@ db.transaction(() => {
     );
   }
   const apiKey = "pk_" + randomBytes(24).toString("base64url");
-  const agent = repos.agents.create({
-    id: AGENT_ID,
-    name: "Ops agent",
-    apiKey,
-    mandate: "Pay approved vendors and issue customer refunds for the store.",
-  });
-  repos.payees.upsert({ email: acme, display_name: "Acme Supplies", trusted: true, notes: "Seeded vendor" });
-  repos.payees.upsert({ email: northwind, display_name: "Northwind Parts", trusted: true, notes: "Seeded vendor" });
-  repos.policies.apply(agent.id, defaultPolicy({ agentId: agent.id, allowlist: [acme, northwind] }), "Seeded default policy (SPEC section 6)");
+  seedDemoWorld(repos, { acmeEmail: acme, northwindEmail: northwind, apiKey });
   if (args.has("--write-env")) saveKeyToEnv(apiKey);
   else printedKey = apiKey;
 })();

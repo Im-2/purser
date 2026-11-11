@@ -36,7 +36,7 @@ try {
   fail("OAuth token", err);
 }
 
-console.log("2. Upstream PayPal MCP (stdio: npx -y @paypal/mcp --tools=all) ...");
+console.log("2. Upstream PayPal MCP (stdio, mode from UPSTREAM_MODE) ...");
 let toolNames: string[] = [];
 try {
   const tools = await upstream.start();

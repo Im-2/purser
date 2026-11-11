@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import type { Config } from "./config.js";
+import { allowedOrigins, type Config } from "./config.js";
 import type { GatewayDeps } from "./gateway/pipeline.js";
 import { registerMcpRoutes } from "./gateway/mcp.js";
 import { registerPolicyRoutes, type AdminDeps } from "./admin/policies.js";
@@ -33,12 +33,37 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
   const app = Fastify({
     logger: {
       level: config.LOG_LEVEL,
-      redact: ["req.headers.authorization"],
+      // never log credentials: the bearer token, any cookie, and the SSE ?token= query (the serializer below also drops the query)
+      redact: ["req.headers.authorization", "req.headers.cookie", "req.headers[\"x-api-key\"]"],
       serializers: {
         // The SSE endpoint accepts ?token= for EventSource, so never log the query string.
         req: (req) => ({ method: req.method, url: req.url?.split("?")[0], host: req.headers?.host, remoteAddress: req.socket?.remoteAddress }),
       },
     },
+  });
+
+  // CORS locked to PUBLIC_URL: a browser request from any other origin is refused outright. Same-origin requests (the dashboard
+  // served by this server) and non-browser clients (agents, PayPal webhooks: no Origin header) are unaffected.
+  const origins = new Set(allowedOrigins(config));
+  app.addHook("onRequest", async (req, reply) => {
+    const origin = req.headers.origin;
+    if (!origin) return;
+    let sameHost = false;
+    try {
+      sameHost = new URL(origin).host === req.headers.host;
+    } catch {
+      // malformed Origin: treated as foreign
+    }
+    if (!origins.has(origin) && !sameHost) return reply.code(403).send({ error: "origin_not_allowed" });
+    void reply.header("access-control-allow-origin", origin).header("vary", "Origin");
+    if (req.method === "OPTIONS") {
+      return reply
+        .header("access-control-allow-methods", "GET,POST,OPTIONS")
+        .header("access-control-allow-headers", "authorization,content-type,mcp-session-id,mcp-protocol-version")
+        .header("access-control-max-age", "600")
+        .code(204)
+        .send();
+    }
   });
 
   app.get("/health", async () => ({

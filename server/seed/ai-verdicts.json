@@ -1,0 +1,176 @@
+{
+  "prompt_version": "review-v1",
+  "verdicts": [
+    {
+      "key": "06139a50bd8c3eb0f6d5f1da48009655e2d98d6586c2cc0c280633b03ff0538a",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 85,
+        "rationale": "Payee email differs from known vendor address and is a look‑alike spelling; deterministic signals flag vendor mismatch and recent address change. Already escalated flag requires human review.",
+        "flags": [
+          "lookalike_payee",
+          "vendor_mismatch",
+          "payee_recently_changed",
+          "payee_not_allowlisted"
+        ]
+      }
+    },
+    {
+      "key": "1c0c6f5ec277ab4b32e0ec04445ded7b74e48e38c9fdb7a686a29b7857821783",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 80,
+        "rationale": "Amount $160 exceeds the approval threshold and the payee is a first-time recipient not on the allowlist.",
+        "flags": [
+          "approval_threshold",
+          "first_time_payee",
+          "amount_unusual"
+        ]
+      }
+    },
+    {
+      "key": "1cda44c2d1e0975765b19729fc0390318052a8d6581ca2149da8f3b93215b974",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 45,
+        "rationale": "Amount $160 exceeds the approval threshold of $150 and the request has already been escalated; payee is a known allowlisted vendor but prior similar payout was escalated.",
+        "flags": [
+          "approval_threshold",
+          "already_escalated"
+        ]
+      }
+    },
+    {
+      "key": "478b36898fd8aa1e9f41d9f5c8e0746cdad1aba25aabbb157b579fa8c9183f1e",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 80,
+        "rationale": "Payee email is a look‑alike of a known vendor and has not been paid before, triggering multiple deterministic signals. Amount is within per‑tx cap but the payee is not on the allowlist and requires human review.",
+        "flags": [
+          "lookalike_payee",
+          "payee_mismatch",
+          "first_time_payee"
+        ]
+      }
+    },
+    {
+      "key": "4e7e9b959528bd317a477bb37c448510457a9902488e22441b14661f69563a6c",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Payee is a known, allowlisted vendor and the $90 amount is within the per‑transaction cap.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "577ffc81be29489ea6a7602d45b21e1eb6c6aba6dc0be9b99fa0de6a6cbbace2",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 80,
+        "rationale": "The payee email differs from the known vendor address and is a look‑alike spelling, triggering vendor_mismatch and payee_recently_changed signals. Already escalated flag requires human review before proceeding.",
+        "flags": [
+          "lookalike_payee",
+          "payee_mismatch",
+          "vendor_mismatch",
+          "payee_recently_changed"
+        ]
+      }
+    },
+    {
+      "key": "5fc2d580fc858bae99d16afdf44b18910a521f76ada6418d160dec47b7ec5013",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Payee is a known, allowlisted vendor and amount is within per‑transaction and daily caps.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "754dd9f4d6bd93b53d2a695ad0b324cbecb7556bebbc43e85dc5f7d8ec4aabba",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Refund of $1.00 to a customer matches the mandate and is within per‑transaction limits.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "8c95417c1d9248c8996b0d2adcb93f6072b86aa5a2a9c28d8fe736d7f93f0fdb",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Payee is a known, allowlisted vendor and amount $120 is within per‑transaction and daily caps.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "9b0af6495f0fec943552d5fe8becbe70ab4585cedba95d14aa4d1d449a2ffbde",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Payee is a known, allowlisted vendor and amount $90 is within per‑transaction and daily caps.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "d088170c3c0dedb49df2975641512cee3db1d77430922142c5fcbdbc9576b6f0",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "escalate",
+        "risk": 85,
+        "rationale": "Payee email differs from known vendor address and is a look‑alike spelling; the payee has recently changed and is not allowlisted.",
+        "flags": [
+          "lookalike_payee",
+          "payee_mismatch",
+          "vendor_mismatch",
+          "payee_recently_changed",
+          "off_mandate"
+        ]
+      }
+    },
+    {
+      "key": "ef0ab8b06ed1dbdffb0b402239816f80f33284e89a8430965b42ac02560bea73",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Payee is a known, allowlisted vendor and amount $90 is within per‑transaction and daily caps.",
+        "flags": [
+          "routine"
+        ]
+      }
+    },
+    {
+      "key": "f02af70a89efa8bb767fd58f74a080578289fd2e7a85fb021c8519e6b4284ccd",
+      "model": "openai/gpt-oss-120b",
+      "verdict": {
+        "verdict": "allow",
+        "risk": 10,
+        "rationale": "Refund of $1.00 USD matches the mandate and is within per‑transaction limits. No suspicious signals or payee mismatches are present.",
+        "flags": [
+          "routine"
+        ]
+      }
+    }
+  ]
+}

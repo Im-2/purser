@@ -12,7 +12,8 @@
         "smoke:paypal": "tsx src/smoke-paypal.ts",
         "mcp:try": "tsx src/mcp-try.ts",
         "ai:check": "tsx src/ai-check.ts",
-        "demo:oob-payout": "tsx src/demo-oob-payout.ts"
+        "demo:oob-payout": "tsx src/demo-oob-payout.ts",
+        "ai:export-cache": "tsx src/ai-export-cache.ts"
     },
     "dependencies": {
         "@fastify/static": "^10.1.10",
@@ -22,7 +23,9 @@
         "better-sqlite3": "^13.0.3",
         "fastify": "^5.12.8",
         "pino": "^10.4.0",
-        "zod": "^4.6.7"
+        "zod": "^4.6.7",
+        "@paypal/mcp": "1.8.1",
+        "tsx": "^4.23.15"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^9.6.0"

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState } from "react";
-import { KIND_LABEL, TypeChip, kindOf, type RowKind } from "../components/ReconGrid";
+import { KIND_LABEL, TypeChip, kindOf, type RowKind } from "../components/ReconChips";
 import { IconScale } from "../components/icons";
 import { Button, Modal, Skeleton } from "../components/ui";
 import { ApiError, post } from "../lib/api";

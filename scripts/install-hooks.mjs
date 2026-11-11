@@ -6,8 +6,9 @@ import path from "node:path";
 
 const gitDir = spawnSync("git", ["rev-parse", "--git-path", "hooks"], { encoding: "utf8" }).stdout.trim();
 if (!gitDir) {
-  console.error("install-hooks: not a git repository");
-  process.exit(1);
+  // a build environment without .git (a tarball, some CI): nothing to install, and that is fine
+  console.log("install-hooks: not a git repository, skipping");
+  process.exit(0);
 }
 mkdirSync(gitDir, { recursive: true });
 const hook = path.join(gitDir, "pre-push");

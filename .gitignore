@@ -11,3 +11,6 @@ coverage/
 
 # third-party design reference media (not ours to redistribute)
 ui/
+
+# environment pasted into Render (contains secrets)
+render.env
