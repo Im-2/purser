@@ -113,6 +113,24 @@ export const MIGRATIONS: { id: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 3,
+    name: "webhooks_and_reconciliation_keys",
+    sql: `
+      -- Every webhook event id we have seen, to dedupe replays. "source" is webhook or simulated.
+      CREATE TABLE webhook_events (
+        id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        source TEXT NOT NULL,
+        received_at INTEGER NOT NULL,
+        outcome TEXT
+      );
+      -- A stable key per real-world thing (payout item, refund, ...) so a repeat delivery or a second run is recognised.
+      ALTER TABLE reconciliation ADD COLUMN ref_key TEXT;
+      CREATE INDEX reconciliation_ref_key ON reconciliation(ref_key);
+      CREATE INDEX reconciliation_finding ON reconciliation(finding_type);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): number[] {

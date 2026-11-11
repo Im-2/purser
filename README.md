@@ -87,3 +87,41 @@ Try it (server running with `pnpm --filter @purser/server dev`):
 
     pnpm --filter @purser/server mcp:try -- --escalate-only       # $160 to Acme, escalated, nothing executes
     curl.exe -X POST -H "Authorization: Bearer $env:PURSER_ADMIN_TOKEN" http://127.0.0.1:8799/api/approvals/<approval_id>/approve
+
+## Reconciliation (feature 8)
+
+Purser checks PayPal's view against its own ledger. Findings are stored in `reconciliation`, listed at
+`GET /api/reconciliation`, and each non-ok finding is pushed over SSE as `reconciliation_finding`.
+
+| Finding | Meaning |
+|---|---|
+| `unrecorded_movement` | PayPal shows a payout or refund Purser has no executed record of (a bypass or compromised credential) |
+| `amount_mismatch` | PayPal's amount, currency or receiver differs from what Purser approved |
+| `duplicate` | PayPal sent the same outcome for one payout under a different event id |
+| `payout_denied_or_unclaimed` | A recorded payout was failed, blocked, held, returned, refunded, canceled or left unclaimed |
+
+**Webhook receiver** `POST /webhooks/paypal` verifies the signature with PayPal's `verify-webhook-signature` endpoint using the
+exact raw request body and `PAYPAL_WEBHOOK_ID`, before anything else. An invalid signature is a 401; if PayPal's verify endpoint
+is unreachable it answers 503 so PayPal retries; without `PAYPAL_WEBHOOK_ID` it refuses everything. Event ids are stored, so
+replays are ignored. Handled: `PAYMENT.PAYOUTS-ITEM.{SUCCEEDED,FAILED,BLOCKED,HELD,RETURNED,REFUNDED,UNCLAIMED,CANCELED}`,
+`PAYMENT.PAYOUTSBATCH.{PROCESSING,SUCCESS,DENIED}` and `PAYMENT.CAPTURE.{COMPLETED,PENDING,REVERSED,DENIED,DECLINED,REFUNDED}`
+(plus `PAYMENT.PAYOUTS-ITEM.DENIED`, which is not in PayPal's current list but appears in older docs). Payouts are matched
+through `sender_item_id` (Purser sets it to the attempt id) or the stored batch id.
+
+> **Live signature verification is still pending deployment.** PayPal can only call a public URL, so the signature path is
+> covered by tests with a mocked verification endpoint. After deploying, set `PAYPAL_WEBHOOK_ID` and register
+> `https://<your-host>/webhooks/paypal` in the PayPal developer dashboard.
+
+**Without a public URL** use the dev-only simulator (not registered when `NODE_ENV=production`; it skips signature checks):
+
+    curl.exe -X POST -H "Authorization: Bearer $env:PURSER_ADMIN_TOKEN" -H "content-type: application/json" `
+      --data-binary "@event.json" http://127.0.0.1:8799/api/dev/simulate-webhook
+
+**Manual run** `POST /api/reconciliation/run` (optional `{"since": "<ISO>"}` or `{"lookback_hours": 24}`) looks up the payout batch
+for every ledger row and reads recent transactions from Transaction Search. Sandbox search can trail real time by hours, so the
+response reports `transaction_search.status` (`ok`, `lagging`, `unavailable`, `skipped`) and a note; a lagging or failing search
+never fails the run, and webhooks plus batch lookups still cover the gap.
+
+**Demo** `pnpm --filter @purser/server demo:oob-payout` sends a direct $5 payout to the Northwind vendor through the PayPal adapter,
+bypassing Purser, then feeds the matching simulated webhook events to the running server. Reconciliation flags it as
+`unrecorded_movement` and the finding appears on the SSE stream.

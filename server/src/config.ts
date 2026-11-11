@@ -28,7 +28,9 @@ export const EnvSchema = z.object({
   LLM_REASONING_EFFORT: z.preprocess(emptyToUndef, z.enum(["none", "low", "medium", "high"]).default("low")),
   LLM_TIMEOUT_MS: z.preprocess(emptyToUndef, z.coerce.number().int().min(1000).max(120000).default(20000)),
   AI_CACHE_TTL_SEC: z.preprocess(emptyToUndef, z.coerce.number().int().min(0).default(86400)),
-  AI_MODE: z.preprocess(emptyToUndef, z.enum(["live", "cached_only"]).default("live")),  LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
+  AI_MODE: z.preprocess(emptyToUndef, z.enum(["live", "cached_only"]).default("live")),
+  NODE_ENV: optStr,
+  LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

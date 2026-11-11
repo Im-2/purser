@@ -6,6 +6,8 @@ import type { HistoryEntry } from "../policy/rules.js";
 export const hashApiKey = (key: string): string => createHash("sha256").update(key).digest("hex");
 const newId = (prefix: string) => `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
 const j = (v: unknown) => JSON.stringify(v ?? null);
+/** Escape LIKE wildcards so an id is matched literally (use with ESCAPE '\'). */
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`);
 
 export interface AgentRow {
   id: string;
@@ -82,6 +84,8 @@ export interface ReconciliationRow {
   finding_type: string | null;
   detail_json: string;
   ts: number;
+  /** Stable key for the real-world thing this row is about (payout item, refund...), used to recognise repeats. */
+  ref_key: string | null;
 }
 
 export interface NewAttempt {
@@ -221,6 +225,11 @@ export function createRepos(db: Db) {
       return row;
     },
     get: (id: string) => db.prepare("SELECT * FROM attempts WHERE id = ?").get(id) as AttemptRow | undefined,
+    /** Executed refund attempts for a capture (matched against PAYMENT.CAPTURE.REFUNDED events). */
+    refundsForCapture: (captureId: string) =>
+      db
+        .prepare("SELECT * FROM attempts WHERE tool = 'create_refund' AND ledger_id IS NOT NULL AND args_json LIKE ? ESCAPE '\\' ORDER BY ts DESC")
+        .all(`%${escapeLike(`${JSON.stringify("capture_id")}:${JSON.stringify(captureId)}`)}%`) as AttemptRow[],
     list(f: { agent?: string; decision?: Decision; limit?: number } = {}): AttemptRow[] {
       const where: string[] = [];
       const params: unknown[] = [];
@@ -330,10 +339,31 @@ export function createRepos(db: Db) {
     get: (id: string) => db.prepare("SELECT * FROM ledger WHERE id = ?").get(id) as LedgerRow | undefined,
     list: (limit = 200) => db.prepare("SELECT * FROM ledger ORDER BY created_at DESC LIMIT ?").all(limit) as LedgerRow[],
     setStatus: (id: string, status: string) => db.prepare("UPDATE ledger SET status = ? WHERE id = ?").run(status, id).changes > 0,
+    /** Ledger rows whose stored PayPal reference contains this exact JSON fragment, e.g. ("payout_batch_id", "ABC"). */
+    findByRef(key: string, value: string): LedgerRow | undefined {
+      const needle = `%${escapeLike(`${JSON.stringify(key)}:${JSON.stringify(value)}`)}%`;
+      return db.prepare("SELECT * FROM ledger WHERE paypal_ref_json LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT 1").get(needle) as LedgerRow | undefined;
+    },
+    /** Rows whose stored reference mentions this id anywhere (refund ids, capture ids inside upstream results). */
+    findByText(text: string): LedgerRow | undefined {
+      return db.prepare("SELECT * FROM ledger WHERE paypal_ref_json LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT 1").get(`%${escapeLike(text)}%`) as LedgerRow | undefined;
+    },
+    /** Merge fields into the stored PayPal reference (for example the transaction id learned later). */
+    mergeRef(id: string, patch: Record<string, unknown>) {
+      const row = db.prepare("SELECT paypal_ref_json FROM ledger WHERE id = ?").get(id) as { paypal_ref_json: string } | undefined;
+      if (!row) return;
+      let cur: Record<string, unknown>;
+      try {
+        cur = JSON.parse(row.paypal_ref_json) as Record<string, unknown>;
+      } catch {
+        cur = {};
+      }
+      db.prepare("UPDATE ledger SET paypal_ref_json = ? WHERE id = ?").run(JSON.stringify({ ...cur, ...patch }), id);
+    },
   };
 
   const reconciliation = {
-    create(r: { ledger_id?: string | null; paypal_event_id?: string | null; event_type?: string | null; matched: boolean; finding_type?: string | null; detail?: unknown }): ReconciliationRow {
+    create(r: { ledger_id?: string | null; paypal_event_id?: string | null; event_type?: string | null; matched: boolean; finding_type?: string | null; detail?: unknown; ref_key?: string | null }): ReconciliationRow {
       const row: ReconciliationRow = {
         id: newId("rec"),
         ledger_id: r.ledger_id ?? null,
@@ -343,14 +373,46 @@ export function createRepos(db: Db) {
         finding_type: r.finding_type ?? null,
         detail_json: j(r.detail ?? {}),
         ts: Date.now(),
+        ref_key: r.ref_key ?? null,
       };
       db.prepare(
-        "INSERT INTO reconciliation (id,ledger_id,paypal_event_id,event_type,matched,finding_type,detail_json,ts) VALUES (@id,@ledger_id,@paypal_event_id,@event_type,@matched,@finding_type,@detail_json,@ts)",
+        "INSERT INTO reconciliation (id,ledger_id,paypal_event_id,event_type,matched,finding_type,detail_json,ts,ref_key) VALUES (@id,@ledger_id,@paypal_event_id,@event_type,@matched,@finding_type,@detail_json,@ts,@ref_key)",
       ).run(row);
       return row;
     },
-    list: (limit = 200) => db.prepare("SELECT * FROM reconciliation ORDER BY ts DESC LIMIT ?").all(limit) as ReconciliationRow[],
+    list(f: { limit?: number; finding_type?: string; matched?: boolean } = {}): ReconciliationRow[] {
+      const where: string[] = [];
+      const params: unknown[] = [];
+      if (f.finding_type) {
+        where.push("finding_type = ?");
+        params.push(f.finding_type);
+      }
+      if (f.matched !== undefined) {
+        where.push("matched = ?");
+        params.push(f.matched ? 1 : 0);
+      }
+      params.push(Math.min(Math.max(f.limit ?? 200, 1), 1000));
+      return db.prepare(`SELECT * FROM reconciliation ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY ts DESC, rowid DESC LIMIT ?`).all(...params) as ReconciliationRow[];
+    },
+    get: (id: string) => db.prepare("SELECT * FROM reconciliation WHERE id = ?").get(id) as ReconciliationRow | undefined,
     hasEvent: (eventId: string) => !!db.prepare("SELECT 1 FROM reconciliation WHERE paypal_event_id = ?").get(eventId),
+    /** Rows recorded for this real-world thing, optionally by a different event than `exceptEventId`. */
+    byRefKey: (refKey: string, exceptEventId?: string) =>
+      db.prepare("SELECT * FROM reconciliation WHERE ref_key = ? AND (paypal_event_id IS NULL OR paypal_event_id != ?) ORDER BY ts LIMIT 1").get(refKey, exceptEventId ?? "") as ReconciliationRow | undefined,
+    /** A finding whose stored detail mentions this text (for example a transaction id already reported). */
+    findingMentioning: (findingType: string, text: string) =>
+      db.prepare("SELECT * FROM reconciliation WHERE finding_type = ? AND detail_json LIKE ? ESCAPE '\\' LIMIT 1").get(findingType, `%${escapeLike(text)}%`) as ReconciliationRow | undefined,
+    count: () => (db.prepare("SELECT COUNT(*) c FROM reconciliation").get() as { c: number }).c,
+  };
+
+  /** Webhook event ids already received, so replays are ignored. */
+  const webhookEvents = {
+    /** Returns true if the id was new (and is now recorded), false if it was already seen. */
+    tryInsert(id: string, eventType: string, source: "webhook" | "simulated", now = Date.now()): boolean {
+      return db.prepare("INSERT OR IGNORE INTO webhook_events (id,event_type,source,received_at) VALUES (?,?,?,?)").run(id, eventType, source, now).changes > 0;
+    },
+    setOutcome: (id: string, outcome: string) => void db.prepare("UPDATE webhook_events SET outcome = ? WHERE id = ?").run(outcome, id),
+    count: () => (db.prepare("SELECT COUNT(*) c FROM webhook_events").get() as { c: number }).c,
   };
 
   const kv = {
@@ -384,7 +446,7 @@ export function createRepos(db: Db) {
     clear: () => db.prepare("DELETE FROM ai_verdicts").run().changes,
   };
 
-  return { agents, policies, payees, attempts, approvals, ledger, reconciliation, kv, verdicts };
+  return { agents, policies, payees, attempts, approvals, ledger, reconciliation, webhookEvents, kv, verdicts };
 }
 
 export type Repos = ReturnType<typeof createRepos>;

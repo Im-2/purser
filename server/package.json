@@ -11,7 +11,8 @@
                     "seed":  "tsx src/seed.ts",
                     "smoke:paypal":  "tsx src/smoke-paypal.ts",
                     "mcp:try":  "tsx src/mcp-try.ts",
-                    "ai:check":  "tsx src/ai-check.ts"
+                    "ai:check":  "tsx src/ai-check.ts",
+                    "demo:oob-payout":  "tsx src/demo-oob-payout.ts"
                 },
     "dependencies":  {
                          "@modelcontextprotocol/sdk":  "^1.32.2",
