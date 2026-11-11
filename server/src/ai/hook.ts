@@ -58,6 +58,7 @@ export function createPipelineHooks(deps: { repos: Repos; reviewer: Reviewer }):
         amount: ctx.extracted.amountMinor === null ? null : fromMinor(ctx.extracted.amountMinor),
         currency: ctx.extracted.currency,
         payeeEmail: ctx.extracted.payeeEmail,
+        payeeStatus: payeeStatus(repos, ctx),
         reason: ctx.reason,
         source: ctx.source,
         args: ctx.args,
@@ -70,6 +71,16 @@ export function createPipelineHooks(deps: { repos: Repos; reviewer: Reviewer }):
       // The reviewer can only tighten: "allow" proposes nothing, so the earlier decision stands.
       return { ai, decision: verdict.verdict === "allow" ? undefined : verdict.verdict };
     },
+  };
+}
+
+/** Whether the payee is a known vendor and on the allowlist, from Purser's own records (never from agent text). */
+function payeeStatus(repos: Repos, ctx: HookContext): { known_vendor: boolean; on_allowlist: boolean } | undefined {
+  const email = ctx.extracted.payeeEmail?.trim().toLowerCase();
+  if (!email) return undefined;
+  return {
+    known_vendor: Boolean(repos.payees.byEmail(email)),
+    on_allowlist: ctx.policy.payees.allowlist.some((a) => a.trim().toLowerCase() === email),
   };
 }
 

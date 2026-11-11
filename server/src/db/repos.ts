@@ -243,10 +243,10 @@ export function createRepos(db: Db) {
       db.prepare(`UPDATE attempts SET ${keys.map((k) => `${k} = @${k}`).join(", ")} WHERE id = @id`).run({ ...patch, id });
     },
     /** History for the rule engine: attempts since `sinceMs`. */
-    history(agentId: string, sinceMs: number): HistoryEntry[] {
+    history(agentId: string, sinceMs: number, excludeId?: string): HistoryEntry[] {
       const rows = db
-        .prepare("SELECT ts, tool_class, amount, payee_email, decision FROM attempts WHERE agent_id = ? AND ts > ? ORDER BY ts")
-        .all(agentId, sinceMs) as { ts: number; tool_class: ToolClass; amount: number | null; payee_email: string | null; decision: Decision }[];
+        .prepare("SELECT ts, tool_class, amount, payee_email, decision FROM attempts WHERE agent_id = ? AND ts > ? AND id != ? ORDER BY ts")
+        .all(agentId, sinceMs, excludeId ?? "") as { ts: number; tool_class: ToolClass; amount: number | null; payee_email: string | null; decision: Decision }[];
       return rows.map((r) => ({
         tsMs: r.ts,
         toolClass: r.tool_class,
@@ -254,6 +254,27 @@ export function createRepos(db: Db) {
         payeeEmail: r.payee_email,
         decision: r.decision,
       }));
+    },
+    /**
+     * Denies the circuit breaker counts: decisions made by the rules, trust or AI. Kill-switch, auth and human
+     * approval denials are excluded, so a frozen agent cannot keep re-tripping the breaker.
+     */
+    countDenies(agentId: string, sinceMs: number): number {
+      return (
+        db
+          .prepare("SELECT COUNT(*) c FROM attempts WHERE agent_id = ? AND decision = 'deny' AND ts > ? AND decision_stage NOT IN ('killswitch','auth','approval')")
+          .get(agentId, sinceMs) as { c: number }
+      ).c;
+    },
+    /** Dashboard stats since `sinceMs`: allowed money-out spend, blocked (denied) money calls, and their amounts. */
+    stats(sinceMs: number): { spend_minor: number; blocked_count: number; blocked_minor: number } {
+      const spend = db
+        .prepare("SELECT COALESCE(SUM(amount),0) s FROM attempts WHERE ts >= ? AND tool_class = 'money_out' AND decision = 'allow' AND decision_stage != 'execute'")
+        .get(sinceMs) as { s: number };
+      const blocked = db
+        .prepare("SELECT COUNT(*) c, COALESCE(SUM(amount),0) s FROM attempts WHERE ts >= ? AND decision = 'deny' AND tool_class != 'read'")
+        .get(sinceMs) as { c: number; s: number };
+      return { spend_minor: spend.s, blocked_count: blocked.c, blocked_minor: blocked.s };
     },
     clearAll() {
       db.exec("DELETE FROM reconciliation; DELETE FROM ledger; DELETE FROM approvals; DELETE FROM attempts;");

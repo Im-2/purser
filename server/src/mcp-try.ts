@@ -10,6 +10,7 @@ import { makeLookalike } from "./trust/lookalike.js";
 //   default           $120 to Acme (real sandbox money), $9,999 (must be denied), then $90 to a look-alike of Acme (must be escalated)
 //   --skip-payout     list tools and status only
 //   --lookalike-only  list tools and status, then only the look-alike scenario (no money moves)
+//   --escalate-only   list tools and status, then a $160 payout to Acme that is escalated for human approval (no money moves until approved)
 // The agent key comes from AGENT_API_KEY in .env and is never printed.
 loadDotEnv();
 const config = loadConfig();
@@ -25,6 +26,7 @@ if (!acme) {
 }
 const skipPayout = process.argv.includes("--skip-payout");
 const lookalikeOnly = process.argv.includes("--lookalike-only");
+const escalateOnly = process.argv.includes("--escalate-only");
 const url = new URL(`http://127.0.0.1:${config.PORT}/mcp`);
 
 const NATIVE = new Set(["purser_payout", "purser_check_approval", "purser_status"]);
@@ -113,6 +115,19 @@ try {
 
   if (skipPayout) {
     console.log("\npayouts skipped (--skip-payout)");
+  } else if (escalateOnly) {
+    // $160 to the allowlisted Acme vendor: above the approval threshold ($150) but under the per-transaction cap ($200).
+    console.log("\nEscalation: $160.00 to the allowlisted Acme vendor (needs human approval; nothing executes until approved) ...");
+    const esc = await callJson(client, "purser_payout", { recipient_email: acme, amount: 160, currency: "USD", note: "Purser mcp:try escalation", reason: "Quarterly supplies order", source: "mcp:try CLI" });
+    console.log("  ->", esc.raw);
+    if (esc.json?.purser !== "pending_approval") {
+      console.error("  FAIL: expected purser=pending_approval");
+      exitCode = 3;
+    } else {
+      console.log(`\n  attempt_id=${esc.json.attempt_id}`);
+      console.log(`  approval_id=${esc.json.approval_id}`);
+      console.log("  Approve with: curl.exe -X POST -H \"Authorization: Bearer $env:PURSER_ADMIN_TOKEN\" http://127.0.0.1:" + config.PORT + "/api/approvals/" + String(esc.json.approval_id) + "/approve");
+    }
   } else {
     if (!lookalikeOnly) {
       console.log("\nHappy path: $120.00 to the Acme vendor (real sandbox money) ...");

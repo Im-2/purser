@@ -1,4 +1,7 @@
 import type { AiVerdict, Decision, DecisionStage, Policy, ToolClass } from "@purser/shared";
+import { approvalSummary } from "../approvals/summary.js";
+import { checkBreaker } from "../control/breaker.js";
+import { GLOBAL_FREEZE_KEY } from "../control/killswitch.js";
 import type { AgentRow, AttemptRow, Repos } from "../db/repos.js";
 import { attemptRowToRecord, type EventBus } from "../events.js";
 import { fromMinor } from "../money.js";
@@ -8,7 +11,7 @@ import { extractCall, type Extracted } from "../policy/extract.js";
 import { evaluateRules, type RuleHit } from "../policy/rules.js";
 
 export const NATIVE_TOOLS = ["purser_payout", "purser_check_approval", "purser_status"] as const;
-export const GLOBAL_FREEZE_KEY = "global_freeze";
+export { GLOBAL_FREEZE_KEY };
 const DAY = 24 * 60 * 60 * 1000;
 const REASON_SOURCE_MAX = 1000;
 
@@ -145,6 +148,8 @@ export async function runPipeline(deps: GatewayDeps, agentId: string, tool: stri
   };
   const deny = (stage: DecisionStage, hits: unknown[], message: string, signals: SignalItem[] = [], ai: AiVerdict | null = null): ToolResponse => {
     const row = record("deny", stage, hits, signals, ai);
+    // Circuit breaker: enough recent denies freeze the agent. Kill-switch denials never count (the agent is already stopped).
+    if (stage !== "killswitch" && stage !== "auth") checkBreaker({ repos, bus }, agentId, now);
     return text(deniedShape(row.id, message));
   };
 
@@ -273,7 +278,8 @@ export async function executeAllowed(
       const id = typeof forward.approval_id === "string" ? forward.approval_id : "";
       const ap = id ? repos.approvals.get(id) : undefined;
       const mine = ap && repos.attempts.get(ap.attempt_id)?.agent_id === agent.id;
-      const out = mine ? { purser: "approval", approval_id: ap.id, status: ap.status } : { purser: "approval", approval_id: id, status: "not_found" };
+      // pending / approved / denied / expired, plus a short execution summary once it was approved
+      const out = mine ? { purser: "approval", ...approvalSummary(repos, ap, (deps.now ?? Date.now)()) } : { purser: "approval", approval_id: id, status: "not_found" };
       settle({ upstream_result_json: JSON.stringify(out) });
       return text(out);
     }

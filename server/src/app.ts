@@ -3,12 +3,16 @@ import type { Config } from "./config.js";
 import type { GatewayDeps } from "./gateway/pipeline.js";
 import { registerMcpRoutes } from "./gateway/mcp.js";
 import { registerPolicyRoutes, type AdminDeps } from "./admin/policies.js";
+import { registerAdminApi } from "./admin/api.js";
 
 export interface AppOptions {
   /** When provided, the MCP gateway is mounted at /mcp. */
   gateway?: GatewayDeps;
-  /** When provided, the policy compile/apply admin routes are mounted. */
-  admin?: AdminDeps;
+  /**
+   * When provided, the admin API is mounted. With `gateway` set it is the full admin API (agents, attempts, approvals,
+   * kill switch, stats, SSE, demo reset, policies). Without it, only the policy compile/apply routes.
+   */
+  admin?: AdminDeps & { gateway?: GatewayDeps; sseHeartbeatMs?: number };
 }
 
 export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance {
@@ -16,6 +20,10 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
     logger: {
       level: config.LOG_LEVEL,
       redact: ["req.headers.authorization"],
+      serializers: {
+        // The SSE endpoint accepts ?token= for EventSource, so never log the query string.
+        req: (req) => ({ method: req.method, url: req.url?.split("?")[0], host: req.headers?.host, remoteAddress: req.socket?.remoteAddress }),
+      },
     },
   });
 
@@ -31,7 +39,14 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
       await mcp.closeAll();
     });
   }
-  if (opts.admin) registerPolicyRoutes(app, opts.admin);
+  if (opts.admin) {
+    const { gateway, ...rest } = opts.admin;
+    if (gateway) {
+      const api = registerAdminApi(app, { ...rest, gateway });
+      // preClose, not onClose: Fastify waits for open connections before onClose, and an SSE stream never ends on its own.
+      app.addHook("preClose", async () => api.closeStreams());
+    } else registerPolicyRoutes(app, rest);
+  }
 
   return app;
 }

@@ -27,7 +27,7 @@ Businesses are starting to let AI agents operate their PayPal accounts: issue re
    - **Proxied tools:** the upstream PayPal MCP tools, passed through the policy pipeline.
    - **Native tools:** `purser_payout` (wraps PayPal Payouts REST API, sandbox), `purser_check_approval`, `purser_status`.
 3. **Tool names drift between PayPal doc versions** (for example `pay_order` vs `capture_order`). Do NOT hardcode the upstream list. At startup, call `tools/list` on the upstream MCP server, cache it, and classify each tool by name pattern (section 5). Unknown tools default to deny (fail closed).
-4. **AI can only tighten, never loosen.** The AI reviewer runs only on calls the hard rules already allowed. It may return allow, escalate, or deny. It can never convert a rule-based deny or a rule-based escalate into an allow.
+4. **AI can only tighten, never loosen.** The AI reviewer may return allow, escalate, or deny. On a call the earlier stages allowed it can tighten the decision; on a call already escalated it only explains the risk for the human approver (advisory). It can never convert a rule-based deny or a rule-based escalate into an allow.
 5. **All agent-supplied text is untrusted.** The `reason`, `source`, and any invoice or email text are data, never instructions, inside the AI reviewer prompt. Reviewer output is JSON validated by a schema.
 6. **Sandbox only.** `PAYPAL_ENV=sandbox`. No live credentials anywhere.
 7. **Every decision is explainable.** Each attempt stores which stage decided, which rules fired, which signals were raised, and the AI rationale.
@@ -93,10 +93,14 @@ Each stage appends to the attempt record. First terminal result wins, except whe
    - `payee_recently_changed`: known vendor now paid via a different email
    - `free_mail_for_business`: business-named vendor paid at a free-mail domain
    - Severity mapping: lookalike or vendor_mismatch = ESCALATE by default (policy can set DENY); first_time follows the allowlist mode.
-4. **AI reviewer** (only if still ALLOW and policy `ai_review.enabled`, and any of: signals present, amount at or above `ai_review.min_amount`, or tool is money_out):
+4. **AI reviewer** (runs on any call that is not already DENY, when policy `ai_review.enabled` and any of: signals present, amount at or above `ai_review.min_amount`, or tool is money_out):
    - Input: mandate, policy summary, tool, args, amount, payee, `reason`, `source`, signals, recent attempts summary.
    - Output (JSON, zod-validated): `verdict: allow|escalate|deny`, `risk: 0-100`, `rationale`, `flags[]`.
-   - Reviewer failure or invalid JSON = ESCALATE (fail closed).
+   - **On a call that is still ALLOW (decisive role):** the verdict is combined with the earlier decision using the strictest of the two. `escalate` or `deny` tightens the decision; `allow` changes nothing.
+   - **On a call that is already ESCALATE (advisory role):** the reviewer still runs so the human approver sees a rationale (scenario A shows it next to the signal chips). Its verdict is recorded on the attempt (`ai.advisory = true`) but never changes the decision: an advisory `deny` leaves the call escalated for the human to decide, and an advisory `allow` does not approve anything.
+   - **It can never loosen a decision.** A rule-based or trust-based deny or escalate is never converted to an allow, in either role. A rule-based DENY never reaches the reviewer.
+   - Reviewer failure or invalid JSON = ESCALATE (fail closed). On a call that is already escalated, a failure is recorded as an unavailable review and the escalation stands.
+   - Verdicts are cached by a hash of the normalized input; a replay mode (`AI_MODE=cached_only`) serves cached verdicts only and never calls the model.
 5. **Execute** (ALLOW): call upstream or native implementation, write ledger row, return result.
 6. **ESCALATE**: create approval, notify dashboard and Telegram, return `pending_approval` + `approval_id` to the agent. On approve, Purser executes the stored call and records the outcome. On deny, attempt is closed. Approvals expire after `approval_ttl_sec`.
 

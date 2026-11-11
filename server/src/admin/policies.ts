@@ -1,10 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { PolicySchema } from "@purser/shared";
 import { CompileError, compilePolicy, policyWarnings } from "../ai/compiler.js";
 import type { LlmClient } from "../ai/llm.js";
 import type { Repos } from "../db/repos.js";
+import { makeAdminGuard } from "./auth.js";
 
 export interface AdminDeps {
   repos: Repos;
@@ -16,21 +16,9 @@ export interface AdminDeps {
 const CompileBody = z.object({ agent_id: z.string().min(1).max(100), text: z.string().min(1).max(2000) });
 const ApplyBody = z.object({ agent_id: z.string().min(1).max(100), policy: z.unknown(), source_text: z.string().max(2000).optional() });
 
-function authorized(req: FastifyRequest, token: string): boolean {
-  const h = req.headers.authorization;
-  const m = typeof h === "string" ? /^Bearer\s+(\S+)$/i.exec(h) : null;
-  if (!m?.[1]) return false;
-  const a = Buffer.from(m[1]);
-  const b = Buffer.from(token);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 /** POST /api/policies/compile and /api/policies/apply (admin token required). */
 export function registerPolicyRoutes(app: FastifyInstance, deps: AdminDeps): void {
-  const guard = async (req: FastifyRequest, reply: FastifyReply) => {
-    if (!deps.adminToken) return reply.code(503).send({ error: "admin_disabled", message: "PURSER_ADMIN_TOKEN is not set." });
-    if (!authorized(req, deps.adminToken)) return reply.code(401).header("WWW-Authenticate", "Bearer").send({ error: "unauthorized" });
-  };
+  const guard = makeAdminGuard(() => deps.adminToken);
 
   app.post("/api/policies/compile", { preHandler: guard }, async (req, reply) => {
     const body = CompileBody.safeParse(req.body);

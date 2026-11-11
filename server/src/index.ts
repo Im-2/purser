@@ -7,6 +7,7 @@ import { createEventBus } from "./events.js";
 import { createLlmClient, describeLlm } from "./ai/llm.js";
 import { createReviewer } from "./ai/reviewer.js";
 import { createPipelineHooks } from "./ai/hook.js";
+import { startApprovalSweeper } from "./approvals/service.js";
 import { DisabledUpstream, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
 
 loadDotEnv();
@@ -31,10 +32,14 @@ const reviewer = createReviewer({
 });
 const hooks = createPipelineHooks({ repos, reviewer });
 
+const gateway = { repos, upstream, paypal, bus, hooks };
 const app = buildApp(config, {
-  gateway: { repos, upstream, paypal, bus, hooks },
-  admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN },
+  gateway,
+  admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN, gateway },
 });
+
+// Background sweeper: marks approvals past their expiry as expired and closes their attempts.
+const stopSweeper = startApprovalSweeper(gateway, 30_000);
 
 app.log.info(`AI layer: ${describeLlm(config)}, mode=${config.AI_MODE}, verdict cache ttl=${config.AI_CACHE_TTL_SEC}s`);
 if (!llm) app.log.warn("No LLM configured: the AI reviewer will fail closed (escalate) and policy compile is unavailable");
@@ -51,6 +56,7 @@ if (paypal) {
 }
 
 const shutdown = async () => {
+  stopSweeper();
   await app.close();
   await upstream.close().catch(() => undefined);
   process.exit(0);

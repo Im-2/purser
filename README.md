@@ -56,3 +56,34 @@ Both routes need `Authorization: Bearer $PURSER_ADMIN_TOKEN`.
     POST /api/policies/apply     { "agent_id": "agent_ops_01", "policy": {...}, "source_text": "..." }
 
 `compile` only proposes a policy (it never applies anything); `apply` validates it again, versions it and activates it.
+
+## Control plane (admin API)
+
+All routes need `Authorization: Bearer $PURSER_ADMIN_TOKEN` (the admin API is disabled if the token is unset). On Windows use
+`curl.exe`, because `curl` in PowerShell is an alias for something else.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/attempts?agent=&decision=&limit=`, `GET /api/attempts/:id` | The audit trail with rule hits, signals, AI verdict, approval and ledger |
+| `GET /api/agents`, `POST /api/agents` | List agents (with freeze reason) / create one (key shown once, default policy applied) |
+| `POST /api/agents/:id/freeze`, `/unfreeze`, `POST /api/freeze-all`, `/unfreeze-all` | Kill switch, persisted; a frozen agent is denied at stage 0 |
+| `GET /api/approvals?status=pending`, `POST /api/approvals/:id/approve`, `/deny` | Human approval. Approve runs the stored call exactly once |
+| `GET /api/policies/:agentId`, `POST /api/policies/compile`, `/apply` | Policy versions and the plain-English compiler |
+| `GET /api/stats` | Spend today, blocked count and amount, pending approvals |
+| `GET /api/events` | Server-Sent Events: `attempt`, `approval_created`, `approval_resolved`, `agent_status`, `breaker_tripped` (15 s heartbeat; token via header or `?token=`) |
+| `POST /api/demo/reset` | Wipe attempts, approvals, ledger and reconciliation, unfreeze everything, restore the seeded policy |
+
+Behaviour worth knowing:
+
+- **Approve is exactly-once.** The `pending -> approved` claim is one atomic update done before anything is executed, so
+  concurrent or repeated approvals lose the claim (HTTP 409) and cannot pay twice. The payout also carries an idempotency key
+  derived from the attempt id. Approval overrides escalate-level rules only: the hard rules are re-checked at approval time, so
+  a human cannot approve past a spending cap that was reached in the meantime.
+- **Approvals expire** after `approval_ttl_sec` (a background sweeper marks them; an expired approval cannot be approved).
+- **Circuit breaker.** `breaker.max_denies` denies within `breaker.window_sec` freeze the agent and emit `breaker_tripped`; the
+  reason and numbers appear under `freeze` in `GET /api/agents`. Kill-switch and human-approval denials do not count.
+
+Try it (server running with `pnpm --filter @purser/server dev`):
+
+    pnpm --filter @purser/server mcp:try -- --escalate-only       # $160 to Acme, escalated, nothing executes
+    curl.exe -X POST -H "Authorization: Bearer $env:PURSER_ADMIN_TOKEN" http://127.0.0.1:8799/api/approvals/<approval_id>/approve

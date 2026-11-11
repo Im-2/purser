@@ -19,3 +19,5 @@ export function defaultPolicy(opts: { agentId: string; allowlist: string[]; mand
     approval_ttl_sec: 900,
   };
 }
+
+export const SEEDED_AGENT_ID = "agent_ops_01";
