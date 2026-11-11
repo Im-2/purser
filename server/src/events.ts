@@ -54,7 +54,7 @@ export function attemptRowToRecord(r: AttemptRow): AttemptRecord {
     decision: r.decision,
     decision_stage: r.decision_stage as AttemptRecord["decision_stage"],
     rule_hits: parse<{ id: string }[]>(r.rule_hits_json, []).map((h) => (typeof h === "string" ? h : h.id)),
-    signals: parse<string[]>(r.signals_json, []),
+    signals: parse<(string | { id: string })[]>(r.signals_json, []).map((s) => (typeof s === "string" ? s : s.id)),
     ai: parse(r.ai_json, null),
     approval_id: r.approval_id,
     upstream_result: parse(r.upstream_result_json, null),

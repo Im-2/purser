@@ -1,4 +1,4 @@
-import type { AiVerdict, Decision, DecisionStage, ToolClass } from "@purser/shared";
+import type { AiVerdict, Decision, DecisionStage, Policy, ToolClass } from "@purser/shared";
 import type { AgentRow, AttemptRow, Repos } from "../db/repos.js";
 import { attemptRowToRecord, type EventBus } from "../events.js";
 import { fromMinor } from "../money.js";
@@ -12,10 +12,17 @@ export const GLOBAL_FREEZE_KEY = "global_freeze";
 const DAY = 24 * 60 * 60 * 1000;
 const REASON_SOURCE_MAX = 1000;
 
+/** A trust signal as stored on the attempt: a bare id, or id plus severity and the evidence behind it. */
+export type SignalItem = string | { id: string; severity?: string; evidence?: string };
+const signalId = (s: SignalItem) => (typeof s === "string" ? s : s.id);
+
 export interface PipelineHooks {
-  /** HOOK stage 3 (prompt 5): payee trust signals. May only tighten (escalate/deny); never loosen. */
-  trust?(ctx: HookContext): Promise<{ signals: string[]; decision?: "escalate" | "deny" }> | { signals: string[]; decision?: "escalate" | "deny" };
-  /** HOOK stage 4 (prompt 5): AI reviewer. Runs only if still allowed. May only tighten. Failure must escalate. */
+  /** Stage 3: payee trust signals. May only tighten (escalate/deny); never loosen. */
+  trust?(ctx: HookContext): Promise<{ signals: SignalItem[]; decision?: "escalate" | "deny" }> | { signals: SignalItem[]; decision?: "escalate" | "deny" };
+  /**
+   * Stage 4: AI reviewer. On an allowed call it may tighten (escalate/deny) and failure must escalate.
+   * On an already-escalated call it is advisory: it records a rationale for the human approver and can never loosen.
+   */
   aiReview?(ctx: HookContext): Promise<{ ai: AiVerdict | null; decision?: "escalate" | "deny" }> | { ai: AiVerdict | null; decision?: "escalate" | "deny" };
 }
 
@@ -29,6 +36,10 @@ export interface HookContext {
   source: string | null;
   signals: string[];
   ruleHits: RuleHit[];
+  policy: Policy;
+  nowMs: number;
+  /** True when the call was already escalated before the reviewer ran. */
+  advisory: boolean;
 }
 
 export interface GatewayDeps {
@@ -110,7 +121,7 @@ export async function runPipeline(deps: GatewayDeps, agentId: string, tool: stri
   let extracted = extractCall(tool, forward);
 
   const finish = (): number => Math.round(performance.now() - t0);
-  const record = (decision: Decision, stage: DecisionStage, hits: unknown[], signals: string[], ai: AiVerdict | null): AttemptRow => {
+  const record = (decision: Decision, stage: DecisionStage, hits: unknown[], signals: SignalItem[], ai: AiVerdict | null): AttemptRow => {
     const row = repos.attempts.create({
       agent_id: agentId,
       tool,
@@ -132,7 +143,7 @@ export async function runPipeline(deps: GatewayDeps, agentId: string, tool: stri
     bus.publish({ type: "attempt", data: attemptRowToRecord(row) });
     return row;
   };
-  const deny = (stage: DecisionStage, hits: unknown[], message: string, signals: string[] = [], ai: AiVerdict | null = null): ToolResponse => {
+  const deny = (stage: DecisionStage, hits: unknown[], message: string, signals: SignalItem[] = [], ai: AiVerdict | null = null): ToolResponse => {
     const row = record("deny", stage, hits, signals, ai);
     return text(deniedShape(row.id, message));
   };
@@ -171,12 +182,12 @@ export async function runPipeline(deps: GatewayDeps, agentId: string, tool: stri
   });
   let decision: Decision = rules.decision;
   let stage: DecisionStage = "rules";
-  let signals: string[] = [];
+  let signals: SignalItem[] = [];
   let ai: AiVerdict | null = null;
 
   if (decision === "deny") return deny("rules", rules.hits, rules.agentMessage);
 
-  const hookCtx = (): HookContext => ({ agent, tool, toolClass, args: forward, extracted, reason, source, signals, ruleHits: rules.hits });
+  const hookCtx = (): HookContext => ({ agent, tool, toolClass, args: forward, extracted, reason, source, signals: signals.map(signalId), ruleHits: rules.hits, policy, nowMs: now, advisory: decision === "escalate" });
 
   // Stage 3: payee trust (HOOK, prompt 5). Can only tighten.
   if (deps.hooks?.trust) {
@@ -193,20 +204,26 @@ export async function runPipeline(deps: GatewayDeps, agentId: string, tool: stri
   }
   if (decision === "deny") return deny(stage, rules.hits, "This request was blocked by spending policy.", signals);
 
-  // Stage 4: AI reviewer (HOOK, prompt 5). Only runs on calls still allowed. Can only tighten; failure escalates.
-  if (decision === "allow" && deps.hooks?.aiReview) {
+  // Stage 4: AI reviewer. Can only tighten; failure escalates. On an already-escalated call it is advisory
+  // (rationale for the human approver) and its verdict never changes the decision.
+  if (deps.hooks?.aiReview) {
+    const advisory = decision === "escalate";
     try {
       const r = await deps.hooks.aiReview(hookCtx());
       ai = r.ai;
-      const next = tighten(decision, r.decision);
-      if (next !== decision) stage = "ai";
-      decision = next;
+      if (!advisory) {
+        const next = tighten(decision, r.decision);
+        if (next !== decision) stage = "ai";
+        decision = next;
+      }
     } catch {
-      decision = tighten(decision, "escalate"); // fail closed
-      stage = "ai";
+      if (!advisory) {
+        decision = tighten(decision, "escalate"); // fail closed
+        stage = "ai";
+      }
     }
   }
-  if (decision === "deny") return deny(stage, rules.hits, "This request was blocked by spending policy.", signals, ai);
+  if ((decision as Decision) === "deny") return deny(stage, rules.hits, "This request was blocked by spending policy.", signals, ai); // set by a non-advisory AI deny
 
   // Stage 6: escalate -> approval row (HOOK: notifications and execute-on-approve arrive in prompt 6).
   if (decision === "escalate") {

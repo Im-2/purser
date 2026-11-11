@@ -31,6 +31,7 @@ const SECRET_ENV_KEYS = [
   "ANTHROPIC_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "AGENT_API_KEY",
+  "LLM_API_KEY",
 ];
 const SECRET_JSON_KEYS = /^(password|client_secret|secret|token|api_key)$/i;
 

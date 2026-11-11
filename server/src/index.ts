@@ -4,6 +4,9 @@ import { buildApp } from "./app.js";
 import { openDb } from "./db/index.js";
 import { createRepos } from "./db/repos.js";
 import { createEventBus } from "./events.js";
+import { createLlmClient, describeLlm } from "./ai/llm.js";
+import { createReviewer } from "./ai/reviewer.js";
+import { createPipelineHooks } from "./ai/hook.js";
 import { DisabledUpstream, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
 
 loadDotEnv();
@@ -16,7 +19,26 @@ const bus = createEventBus();
 const paypal = config.PAYPAL_CLIENT_ID && config.PAYPAL_CLIENT_SECRET ? createPayPalClient(config) : null;
 const upstream: UpstreamClient = paypal ? createUpstream(paypal, repos) : new DisabledUpstream();
 
-const app = buildApp(config, { gateway: { repos, upstream, paypal, bus } });
+// AI layer: one provider-agnostic client shared by the reviewer and the policy compiler.
+const llm = createLlmClient(config);
+const reviewer = createReviewer({
+  llm,
+  repos,
+  ttlMs: config.AI_CACHE_TTL_SEC * 1000,
+  mode: config.AI_MODE,
+  modelHint: config.LLM_MODEL,
+  onError: (info) => app.log.warn(info, "AI review fell back (fail-closed or stale verdict)"),
+});
+const hooks = createPipelineHooks({ repos, reviewer });
+
+const app = buildApp(config, {
+  gateway: { repos, upstream, paypal, bus, hooks },
+  admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN },
+});
+
+app.log.info(`AI layer: ${describeLlm(config)}, mode=${config.AI_MODE}, verdict cache ttl=${config.AI_CACHE_TTL_SEC}s`);
+if (!llm) app.log.warn("No LLM configured: the AI reviewer will fail closed (escalate) and policy compile is unavailable");
+if (!config.PURSER_ADMIN_TOKEN) app.log.warn("PURSER_ADMIN_TOKEN is not set: the admin API is disabled");
 
 if (paypal) {
   // Start the upstream PayPal MCP in the background; the gateway serves native tools meanwhile.

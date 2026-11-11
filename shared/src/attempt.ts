@@ -6,6 +6,12 @@ export const AiVerdict = z.object({
   risk: z.number().min(0).max(100),
   rationale: z.string(),
   flags: z.array(z.string()),
+  model: z.string().optional(),
+  cached: z.boolean().optional(),
+  stale: z.boolean().optional(),
+  latency_ms: z.number().optional(),
+  advisory: z.boolean().optional(),
+  error: z.string().optional(),
 });
 export type AiVerdict = z.infer<typeof AiVerdict>;
 

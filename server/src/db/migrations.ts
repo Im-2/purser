@@ -99,6 +99,20 @@ export const MIGRATIONS: { id: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 2,
+    name: "ai_verdict_cache",
+    sql: `
+      CREATE TABLE ai_verdicts (
+        key TEXT PRIMARY KEY,
+        verdict_json TEXT NOT NULL,
+        model TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_hit_at INTEGER,
+        hits INTEGER NOT NULL DEFAULT 0
+      );
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): number[] {

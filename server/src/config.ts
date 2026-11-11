@@ -20,7 +20,15 @@ export const EnvSchema = z.object({
   TELEGRAM_BOT_TOKEN: optStr,
   TELEGRAM_CHAT_ID: optStr,
   AGENT_API_KEY: optStr,
-  LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
+  // AI layer (provider-agnostic). Groq, Gemini, OpenRouter etc. use LLM_PROVIDER=openai_compat.
+  LLM_PROVIDER: z.preprocess(emptyToUndef, z.enum(["anthropic", "openai_compat"]).optional()),
+  LLM_BASE_URL: optStr,
+  LLM_API_KEY: optStr,
+  LLM_MODEL: optStr,
+  LLM_REASONING_EFFORT: z.preprocess(emptyToUndef, z.enum(["none", "low", "medium", "high"]).default("low")),
+  LLM_TIMEOUT_MS: z.preprocess(emptyToUndef, z.coerce.number().int().min(1000).max(120000).default(20000)),
+  AI_CACHE_TTL_SEC: z.preprocess(emptyToUndef, z.coerce.number().int().min(0).default(86400)),
+  AI_MODE: z.preprocess(emptyToUndef, z.enum(["live", "cached_only"]).default("live")),  LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

@@ -339,7 +339,31 @@ export function createRepos(db: Db) {
     delete: (key: string) => void db.prepare("DELETE FROM kv WHERE key = ?").run(key),
   };
 
-  return { agents, policies, payees, attempts, approvals, ledger, reconciliation, kv };
+  /** Persistent AI verdict cache. Only validated model verdicts are stored; fail-closed defaults never are. */
+  const verdicts = {
+    get(key: string): { verdict: unknown; model: string; created_at: number } | undefined {
+      const r = db.prepare("SELECT verdict_json, model, created_at FROM ai_verdicts WHERE key = ?").get(key) as { verdict_json: string; model: string; created_at: number } | undefined;
+      if (!r) return undefined;
+      try {
+        return { verdict: JSON.parse(r.verdict_json), model: r.model, created_at: r.created_at };
+      } catch {
+        return undefined; // corrupt row is treated as a miss
+      }
+    },
+    put(key: string, verdict: unknown, model: string, now = Date.now()) {
+      db.prepare(
+        "INSERT INTO ai_verdicts (key,verdict_json,model,created_at,hits) VALUES (?,?,?,?,0) ON CONFLICT(key) DO UPDATE SET verdict_json = excluded.verdict_json, model = excluded.model, created_at = excluded.created_at",
+      ).run(key, JSON.stringify(verdict), model, now);
+    },
+    touch(key: string, now = Date.now()) {
+      db.prepare("UPDATE ai_verdicts SET hits = hits + 1, last_hit_at = ? WHERE key = ?").run(now, key);
+    },
+    count: () => (db.prepare("SELECT COUNT(*) c FROM ai_verdicts").get() as { c: number }).c,
+    purgeOlderThan: (ts: number) => db.prepare("DELETE FROM ai_verdicts WHERE created_at < ?").run(ts).changes,
+    clear: () => db.prepare("DELETE FROM ai_verdicts").run().changes,
+  };
+
+  return { agents, policies, payees, attempts, approvals, ledger, reconciliation, kv, verdicts };
 }
 
 export type Repos = ReturnType<typeof createRepos>;
