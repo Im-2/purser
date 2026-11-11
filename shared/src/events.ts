@@ -8,6 +8,7 @@ export const EventName = z.enum([
   "agent_status",
   "breaker_tripped",
   "reconciliation_finding",
+  "scenario_log",
 ]);
 export type EventName = z.infer<typeof EventName>;
 
@@ -45,6 +46,19 @@ export const PurserEvent = z.discriminatedUnion("type", [
         "payout_denied_or_unclaimed",
       ]),
       detail: z.record(z.string(), z.unknown()),
+    }),
+  }),
+  z.object({
+    type: z.literal("scenario_log"),
+    data: z.object({
+      run_id: z.string(),
+      scenario: z.string(),
+      mode: z.enum(["replay", "live"]),
+      /** 1-based order of this entry within the run. */
+      step: z.number(),
+      kind: z.enum(["start", "info", "agent", "tool_call", "tool_result", "decision", "error", "done"]),
+      message: z.string(),
+      data: z.record(z.string(), z.unknown()).optional(),
     }),
   }),
 ]);

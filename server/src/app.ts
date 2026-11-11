@@ -5,6 +5,7 @@ import { registerMcpRoutes } from "./gateway/mcp.js";
 import { registerPolicyRoutes, type AdminDeps } from "./admin/policies.js";
 import { registerAdminApi } from "./admin/api.js";
 import { registerReconciliationRoutes } from "./reconciliation/routes.js";
+import type { DemoRunner } from "./admin/demo-run.js";
 
 export interface AppOptions {
   /** When provided, the MCP gateway is mounted at /mcp. */
@@ -20,6 +21,8 @@ export interface AppOptions {
     webhookId?: string;
     /** In production the dev-only /api/dev/simulate-webhook route is not registered. Defaults to config NODE_ENV. */
     isProduction?: boolean;
+    /** Attack Lab runner (POST /api/demo/run/:scenario). */
+    demo?: DemoRunner;
   };
 }
 
@@ -48,7 +51,7 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
     });
   }
   if (opts.admin) {
-    const { gateway, webhookId, isProduction, ...rest } = opts.admin;
+    const { gateway, webhookId, isProduction, ...rest } = opts.admin; // rest keeps demo and sseHeartbeatMs
     if (gateway) {
       registerReconciliationRoutes(app, { gateway, adminToken: rest.adminToken, webhookId: webhookId ?? config.PAYPAL_WEBHOOK_ID, isProduction: isProduction ?? config.NODE_ENV === "production" });
       const api = registerAdminApi(app, { ...rest, gateway });

@@ -429,8 +429,9 @@ describe("admin API", () => {
     expect(repos.policies.history("agent_ops_01")).toHaveLength(v);
   });
 
-  it("Attack Lab runs are not implemented yet and say so", async () => {
-    expect((await api("POST", "/api/demo/run/A")).statusCode).toBe(501);
+  it("Attack Lab runs answer 503 when no demo runner is configured, and 404 for an unknown scenario", async () => {
+    expect((await api("POST", "/api/demo/run/A")).statusCode).toBe(503);
+    expect((await api("POST", "/api/demo/run/Z")).statusCode).toBe(404);
   });
 });
 

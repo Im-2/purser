@@ -45,12 +45,20 @@ function sumItems(items: unknown, extra: unknown[]): { minor: number | null; cur
   let currency: string | null = null;
   for (const it of items) {
     if (!isObj(it)) return { minor: null, currency: null };
-    const unit = money(it.unit_amount ?? it.price ?? it.amount ?? it.unit_price);
+    // unit_amount: Orders/Invoicing REST shape. itemCost: the PayPal MCP create_order shape.
+    const unit = money(it.unit_amount ?? it.price ?? it.amount ?? it.unit_price ?? it.itemCost);
     if (unit.minor === null) return { minor: null, currency: null };
     const q = it.quantity === undefined ? 1 : Number(it.quantity);
     const line = mulMinor(unit.minor, q);
     if (line === null) return { minor: null, currency: null };
-    total += line;
+    // Per-item tax (MCP: taxPercent; Invoicing: tax.percent). Ignoring it would understate the amount, so it is added.
+    const pctRaw = it.taxPercent ?? (isObj(it.tax) ? it.tax.percent : undefined);
+    const pct = pctRaw === undefined || pctRaw === null || pctRaw === "" ? 0 : Number(pctRaw);
+    if (!Number.isFinite(pct) || pct < 0) return { minor: null, currency: null };
+    const tax = Math.round((line * Math.round(pct * 100)) / 10_000); // basis points on an integer, rounded once to the cent
+    // A stated line total (MCP itemTotal) larger than our computation wins: the stricter reading for a spending cap.
+    const stated = it.itemTotal === undefined ? null : toMinor(it.itemTotal);
+    total += Math.max(line + tax, stated ?? 0);
     currency = currency ?? unit.currency ?? cur(it.currency_code ?? it.currency);
   }
   for (const e of extra) {
@@ -65,14 +73,15 @@ function sumItems(items: unknown, extra: unknown[]): { minor: number | null; cur
 /** Extract amount, currency and payee from a tool call's arguments. Shapes follow PayPal MCP and Purser native tools. */
 export function extractCall(tool: string, args: unknown): Extracted {
   const a: Obj = isObj(args) ? args : {};
-  const empty: Extracted = { amountMinor: null, currency: cur(a.currency_code ?? a.currency), payeeEmail: null };
+  const empty: Extracted = { amountMinor: null, currency: cur(a.currency_code ?? a.currencyCode ?? a.currency), payeeEmail: null };
 
   switch (tool) {
     case "create_order": {
       // Prefer the sum of items; fall back to an explicit amount / purchase_units[0].amount.
       const unit0 = Array.isArray(a.purchase_units) && isObj(a.purchase_units[0]) ? (a.purchase_units[0] as Obj) : undefined;
       const items = a.items ?? unit0?.items;
-      const summed = sumItems(items, [a.shipping_amount ?? a.shipping, a.tax_amount ?? a.tax]);
+      // shippingCost is the MCP name. A discount only lowers the total, so ignoring it is the conservative reading.
+      const summed = sumItems(items, [a.shipping_amount ?? a.shipping ?? a.shippingCost, a.tax_amount ?? a.tax]);
       if (summed.minor !== null) {
         return { amountMinor: summed.minor, currency: summed.currency ?? empty.currency, payeeEmail: firstEmail(a.payee_email, isObj(unit0?.payee) ? (unit0?.payee as Obj).email_address : null) };
       }
@@ -82,7 +91,7 @@ export function extractCall(tool: string, args: unknown): Extracted {
     case "create_invoice": {
       const inv = isObj(a.invoice) ? (a.invoice as Obj) : a;
       const items = inv.items ?? a.items;
-      const summed = sumItems(items, [inv.shipping_amount, inv.tax_amount]);
+      const summed = sumItems(items, [inv.shipping_amount ?? inv.shipping_cost, inv.tax_amount]);
       const recip = Array.isArray(inv.primary_recipients) && isObj(inv.primary_recipients[0]) ? (inv.primary_recipients[0] as Obj) : undefined;
       const billing = isObj(recip?.billing_info) ? (recip?.billing_info as Obj) : undefined;
       const payee = firstEmail(billing?.email_address, a.recipient_email, a.recipient);

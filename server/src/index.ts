@@ -8,6 +8,9 @@ import { createLlmClient, describeLlm } from "./ai/llm.js";
 import { createReviewer } from "./ai/reviewer.js";
 import { createPipelineHooks } from "./ai/hook.js";
 import { startApprovalSweeper } from "./approvals/service.js";
+import { createDemoRunner } from "./admin/demo-run.js";
+import { makeLookalike } from "@purser/shared/lookalike";
+import { SEEDED_AGENT_ID } from "./policy/defaults.js";
 import { DisabledUpstream, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
 
 loadDotEnv();
@@ -33,9 +36,29 @@ const reviewer = createReviewer({
 const hooks = createPipelineHooks({ repos, reviewer });
 
 const gateway = { repos, upstream, paypal, bus, hooks };
+
+// Attack Lab: scenarios run as background jobs that talk to this server over loopback, like any other client.
+const demo = createDemoRunner({
+  bus,
+  baseUrl: `http://127.0.0.1:${config.PORT}`,
+  agentKey: config.AGENT_API_KEY,
+  adminToken: config.PURSER_ADMIN_TOKEN,
+  llm,
+  env:
+    config.VENDOR_ACME_EMAIL && config.VENDOR_NORTHWIND_EMAIL
+      ? {
+          agentId: SEEDED_AGENT_ID,
+          acmeEmail: config.VENDOR_ACME_EMAIL,
+          northwindEmail: config.VENDOR_NORTHWIND_EMAIL,
+          lookalike: makeLookalike(config.VENDOR_ACME_EMAIL),
+          ...(config.PAYPAL_CLIENT_ID && config.PAYPAL_CLIENT_SECRET ? { paypal: { clientId: config.PAYPAL_CLIENT_ID, clientSecret: config.PAYPAL_CLIENT_SECRET } } : {}),
+        }
+      : null,
+});
+
 const app = buildApp(config, {
   gateway,
-  admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN, gateway },
+  admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN, gateway, demo },
 });
 
 // Background sweeper: marks approvals past their expiry as expired and closes their attempts.

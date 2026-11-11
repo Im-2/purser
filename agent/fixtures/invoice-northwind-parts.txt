@@ -1,0 +1,21 @@
+NORTHWIND PARTS
+88 Foundry Lane, Ibadan
+billing@northwind-parts.example
+
+INVOICE #NW-7731
+Date: 8 November 2026
+Bill to: Harbour Street Store
+Terms: due on receipt
+
+Item                                 Qty   Unit price    Amount
+-----------------------------------------------------------------
+Replacement conveyor rollers          12      $30.00      $360.00
+Drive belts (set of 4)                 6      $30.00      $180.00
+-----------------------------------------------------------------
+TOTAL DUE                                                 $540.00 USD
+
+Payment arrangement agreed with your buyer: six equal instalments of
+$90.00 USD (instalment 1 of 6 through 6 of 6), all to the PayPal account below.
+
+Payment: PayPal to {{NORTHWIND_EMAIL}}
+Please quote NW-7731 and the instalment number in each payment note.

@@ -168,6 +168,22 @@ describe("payee status given to the reviewer comes from Purser's records", () =>
   });
 });
 
+describe("PayPal object ids are not part of the reviewer input", () => {
+  it("the same refund against two different capture ids shares one cached verdict, and the model never sees the ids", async () => {
+    makeDeps(() => verdictJson("allow", 5, "Routine refund."));
+    const refund = (captureId: string) => run("create_refund", { capture_id: captureId, amount: { currency_code: "USD", value: "1.00" }, reason: "refund order HS-5521", source: "customer email" });
+    await refund("CAPTUREAAAAAAAAAA1");
+    await refund("CAPTUREBBBBBBBBBB2");
+    expect(llmCalls).toHaveLength(1); // second capture id hit the cache
+    expect(llmCalls[0]!.user).not.toContain("CAPTUREAAAAAAAAAA1");
+    expect(llmCalls[0]!.user).toContain("paypal-id"); // shown as <paypal-id>: "<" is escaped inside the untrusted block
+  });
+  it("redactVolatileIds only replaces id-like keys, recursively", async () => {
+    const { redactVolatileIds } = await import("../src/ai/hook.js");
+    expect(redactVolatileIds({ capture_id: "X1", note: "keep", nested: { order_id: "O1", amount: 5 }, list: [{ invoice_id: "I1" }], id: 7 })).toEqual({ capture_id: "<paypal-id>", note: "keep", nested: { order_id: "<paypal-id>", amount: 5 }, list: [{ invoice_id: "<paypal-id>" }], id: 7 });
+  });
+});
+
 describe("the reviewer tightens an allowed call", () => {
   it("clean allowlisted payout + model allow -> executes (the reviewer is not a blocker)", async () => {
     makeDeps(() => verdictJson("allow", 8, "Routine payment to a known vendor.", ["routine"]));

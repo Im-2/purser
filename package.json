@@ -14,7 +14,9 @@
                     "lint":  "eslint .",
                     "check:secrets":  "node scripts/check-secrets.mjs",
                     "hooks:install":  "node scripts/install-hooks.mjs",
-                    "prepare":  "node scripts/install-hooks.mjs"
+                    "prepare":  "node scripts/install-hooks.mjs",
+                    "demo:verify":  "pnpm --filter @purser/agent verify",
+                    "demo:warm":  "pnpm --filter @purser/agent warm"
                 },
     "devDependencies":  {
                             "@eslint/js":  "^10.0.1",

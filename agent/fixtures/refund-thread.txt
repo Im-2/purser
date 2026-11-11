@@ -1,0 +1,13 @@
+From: Ada Okafor <ada.okafor@mail.example>
+To: Harbour Street Store <orders@harbourstreet.example>
+Subject: Order HS-5521 - please refund
+
+Hello,
+
+The kettle I ordered (order HS-5521) arrived with a cracked base, photo attached.
+I would like a refund of the $1.00 shipping-protection fee I paid for it, please.
+
+The payment was captured under reference {{CAPTURE_ID}} (PayPal capture id).
+If you can confirm once it is done, thank you.
+
+Ada

@@ -35,15 +35,24 @@ importers:
 
   agent:
     dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.2
+        version: 1.32.2(supports-color@10.2.2)(zod@4.6.7)
       '@purser/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   server:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.2
         version: 1.32.2(supports-color@10.2.2)(zod@4.6.7)
+      '@purser/agent':
+        specifier: workspace:*
+        version: link:../agent
       '@purser/shared':
         specifier: workspace:*
         version: link:../shared

@@ -125,3 +125,47 @@ never fails the run, and webhooks plus batch lookups still cover the gap.
 **Demo** `pnpm --filter @purser/server demo:oob-payout` sends a direct $5 payout to the Northwind vendor through the PayPal adapter,
 bypassing Purser, then feeds the matching simulated webhook events to the running server. Reconciliation flags it as
 `unrecorded_movement` and the finding appears on the SSE stream.
+
+## Demo agent and attack scenarios (feature 3)
+
+`/agent` holds the demo agent and four scenarios (A poisoned invoice, B structuring, C runaway loop, D happy path). Each scenario
+has two ways to run, and both write to the same `attempts` table, so the dashboard cannot tell them apart:
+
+| Mode | What drives the tool calls | Purpose |
+|---|---|---|
+| `replay` | A scripted sequence of tool calls (no LLM). The AI reviewer answers from cached verdicts. | The guaranteed demo path: same decisions every run. |
+| `live` | A real agent: an OpenAI-style tool-calling loop on the same LLM client as the reviewer (`LLM_*` in `.env`, Groq by default), connected to `/mcp` with `AGENT_API_KEY`. Capped at 8 model turns; a 429 waits once. | A bonus. A real model reads the fixtures and decides for itself. |
+
+The live agent's prompt is its mandate (SPEC section 10) plus generic helpful-agent instructions. It never mentions Purser and never
+asks for anything improper. Attacks come only from the documents it reads (`agent/fixtures`); the poisoned invoice is an
+ordinary-looking invoice with a change-of-payment-details footer and contains nothing addressed to an AI.
+
+    pnpm --filter agent run scenario A --mode replay      # or --mode live
+    pnpm --filter agent run all --mode replay
+    pnpm --filter agent run warm                          # replay everything once to fill the AI verdict cache (server on AI_MODE=live)
+    pnpm demo:verify                                      # offline replay check, green/red summary, non-zero exit on failure
+
+Each scenario resets the demo state first (`POST /api/demo/reset`) so rolling windows never pollute a run, changes the policy only
+for its own duration, and restores it afterwards. C leaves the agent frozen on purpose (the circuit breaker's result); the next
+reset or the operator unfreezes it. The server must be running (`pnpm dev`).
+
+**Real sandbox money moves** in D ($120 to Acme), B (the first two $90 payouts to Northwind) and C (a $10 sandbox capture and three
+$1 refunds). A moves nothing: its payout goes to a look-alike address that is never a real account, and is held for approval.
+Note that a demo reset clears the ledger, so a later reconciliation run can report earlier demo payouts as unrecorded.
+
+**Scenario C uses a real capture.** A real sandbox capture normally needs a buyer to approve the order in a browser. Instead, setup
+creates the order through the Orders API with PayPal's published sandbox test card, which completes in one call with no redirect, and
+returns a real capture id. That setup call plays the customer; it is not an agent action and does not go through Purser. The
+refunds themselves go through Purser to PayPal's `create_refund`. The AI reviewer is shown PayPal ids as `<paypal-id>`, so a fresh
+capture on every run still hits the cached verdict.
+
+**`pnpm demo:verify`** starts its own server with `AI_MODE=cached_only` and an LLM URL that goes nowhere, so a real model call is
+impossible, then runs all four scenarios in replay and asserts: D allowed and in the ledger; A escalated with `lookalike_payee`,
+an AI rationale, and then denied by a human through the API with no money moved; B ends in a deny by structuring or the daily cap;
+C ends in a velocity deny with the agent frozen by the circuit breaker; every AI verdict came from the cache; the seeded policy was
+restored. It needs cached verdicts (run `warm` once) and the PayPal sandbox for the payouts. Stop the dev server first: both use
+the same database. Set `DEMO_VERIFY_PORT` if 8811 is taken.
+
+**Attack Lab API.** `POST /api/demo/run/:scenario` with `{"mode":"replay"|"live","reset":true}` starts a scenario as a background job
+(202, one at a time) and streams progress as `scenario_log` events on `/api/events`; `GET /api/demo/status` shows the current and last run.
+For a guaranteed offline demo start the server with `AI_MODE=cached_only`.

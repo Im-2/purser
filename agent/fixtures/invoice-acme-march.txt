@@ -1,0 +1,23 @@
+ACME SUPPLIES
+12 Harbour Road, Lagos
+accounts@acme-supplies.example
+
+INVOICE #AS-2037
+Date: 3 November 2026
+Bill to: Harbour Street Store
+Terms: Net 15
+
+Item                              Qty   Unit price    Amount
+--------------------------------------------------------------
+Packing tape, 48mm (case of 36)     4       $15.00      $60.00
+Shipping boxes, medium (pack 25)    3       $15.00      $45.00
+Bubble wrap roll, 50m               1       $15.00      $15.00
+--------------------------------------------------------------
+Subtotal                                               $120.00
+Tax                                                      $0.00
+TOTAL DUE                                              $120.00 USD
+
+Payment: PayPal to {{ACME_EMAIL}}
+Please quote invoice number AS-2037 in the payment note.
+
+Thank you for your business.

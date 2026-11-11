@@ -173,6 +173,79 @@ describe("rate limits, timeouts and errors", () => {
   });
 });
 
+describe("openai_compat tool calling (chat)", () => {
+  const tools = [{ type: "function" as const, function: { name: "purser_payout", description: "pay", parameters: { type: "object", properties: { amount: { type: "number" } } } } }];
+  const chatReply = (message: unknown, finish = "tool_calls") => new Response(JSON.stringify({ choices: [{ finish_reason: finish, message }] }), { status: 200 });
+
+  it("sends tools with tool_choice auto, bearer auth and low reasoning effort, and returns the tool calls", async () => {
+    const { fn, seen } = scripted([chatReply({ role: "assistant", content: null, tool_calls: [{ id: "fc_1", type: "function", function: { name: "purser_payout", arguments: '{"amount":90}' } }] })]);
+    const c = new OpenAiCompatClient(conn(), { fetch: fn });
+    const r = await c.chat({ messages: [{ role: "system", content: "s" }, { role: "user", content: "u" }], tools, maxTokens: 300 });
+    expect(r.message.tool_calls).toEqual([{ id: "fc_1", type: "function", function: { name: "purser_payout", arguments: '{"amount":90}' } }]);
+    expect(r.finish_reason).toBe("tool_calls");
+    expect(seen[0]!.url).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(seen[0]!.headers.Authorization).toBe(`Bearer ${KEY}`);
+    expect(seen[0]!.body).toMatchObject({ tool_choice: "auto", temperature: 0, max_tokens: 300, reasoning_effort: "low" });
+    expect(seen[0]!.body.tools).toEqual(tools);
+    expect(seen[0]!.body).not.toHaveProperty("response_format");
+  });
+  it("returns plain text when the model makes no tool call, and omits tools entirely when none are given", async () => {
+    const { fn, seen } = scripted([chatReply({ role: "assistant", content: "All done." }, "stop")]);
+    const r = await new OpenAiCompatClient(conn(), { fetch: fn }).chat({ messages: [{ role: "user", content: "hi" }], tools: [] });
+    expect(r.message).toEqual({ role: "assistant", content: "All done." });
+    expect(seen[0]!.body).not.toHaveProperty("tools");
+  });
+  it("normalizes tool calls: missing ids are generated, object arguments are serialized", async () => {
+    const { fn } = scripted([chatReply({ role: "assistant", content: null, tool_calls: [{ function: { name: "a", arguments: { x: 1 } } }, { function: { name: 5 } }] })]);
+    const r = await new OpenAiCompatClient(conn(), { fetch: fn }).chat({ messages: [], tools });
+    expect(r.message.tool_calls).toEqual([{ id: "call_0", type: "function", function: { name: "a", arguments: '{"x":1}' } }]);
+  });
+  it("threads tool results back (assistant tool_calls plus a tool message) unchanged", async () => {
+    const { fn, seen } = scripted([chatReply({ role: "assistant", content: "ok" }, "stop")]);
+    const messages = [
+      { role: "user" as const, content: "pay" },
+      { role: "assistant" as const, content: null, tool_calls: [{ id: "c1", type: "function" as const, function: { name: "purser_payout", arguments: "{}" } }] },
+      { role: "tool" as const, tool_call_id: "c1", content: '{"purser":"pending_approval"}' },
+    ];
+    await new OpenAiCompatClient(conn(), { fetch: fn }).chat({ messages, tools });
+    expect(seen[0]!.body.messages).toEqual(messages);
+  });
+  it("waits once on a 429 and retries; fails with rate_limited after that", async () => {
+    const ok = scripted([status(429, "slow", { "retry-after": "2" }), chatReply({ role: "assistant", content: "ok" }, "stop")]);
+    const s = sleeps();
+    await new OpenAiCompatClient(conn(), { fetch: ok.fn, sleep: s.sleep }).chat({ messages: [], tools });
+    expect(s.calls).toEqual([2000]);
+    const bad = scripted([status(429, "slow", { "retry-after": "1" })]);
+    const err = await new OpenAiCompatClient(conn(), { fetch: bad.fn, sleep: sleeps().sleep }).chat({ messages: [], tools }).catch((e) => e);
+    expect(err.kind).toBe("rate_limited");
+    expect(bad.seen).toHaveLength(2);
+  });
+  it("drops reasoning_effort if the endpoint rejects it", async () => {
+    const { fn, seen } = scripted([status(400, { error: { message: "unknown parameter reasoning_effort" } }), chatReply({ role: "assistant", content: "ok" }, "stop")]);
+    await new OpenAiCompatClient(conn(), { fetch: fn }).chat({ messages: [], tools });
+    expect(seen[0]!.body).toHaveProperty("reasoning_effort");
+    expect(seen[1]!.body).not.toHaveProperty("reasoning_effort");
+  });
+  it("a malformed tool call at the provider is invalid_output (so the agent can retry once)", async () => {
+    const { fn } = scripted([status(400, { error: { code: "tool_use_failed", message: "Failed to call a function.", failed_generation: "<bad>" } })]);
+    const err = await new OpenAiCompatClient(conn(), { fetch: fn }).chat({ messages: [], tools }).catch((e) => e);
+    expect(err).toBeInstanceOf(LlmError);
+    expect(err.kind).toBe("invalid_output");
+  });
+  it("timeouts retry once then report timeout; the key never appears in errors", async () => {
+    const b = scripted([timeoutErr()]);
+    const err = await new OpenAiCompatClient(conn(), { fetch: b.fn, sleep: sleeps().sleep }).chat({ messages: [], tools }).catch((e) => e);
+    expect(err.kind).toBe("timeout");
+    expect(JSON.stringify(err)).not.toContain(KEY);
+  });
+  it("supportsToolCalling is true for openai_compat and false for anthropic and null", async () => {
+    const { supportsToolCalling } = await import("../src/ai/llm.js");
+    expect(supportsToolCalling(new OpenAiCompatClient(conn(), { fetch: scripted([]).fn }))).toBe(true);
+    expect(supportsToolCalling(new AnthropicClient(conn({ reasoningEffort: "none" }), { fetch: scripted([]).fn }))).toBe(false);
+    expect(supportsToolCalling(null)).toBe(false);
+  });
+});
+
 describe("anthropic client (same interface)", () => {
   const anth = (over: Partial<LlmConnection> = {}) => conn({ baseUrl: "https://api.anthropic.com", model: "claude-sonnet-5-5", reasoningEffort: "none", ...over });
   it("posts to /v1/messages with x-api-key and parses text content", async () => {

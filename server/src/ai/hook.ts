@@ -7,6 +7,21 @@ import type { PolicySummary, RecentAttempt, Reviewer } from "./reviewer.js";
 
 const isRefund = (tool: string) => /refund/i.test(tool);
 
+/**
+ * PayPal object ids (capture, order, invoice...) are opaque, differ on every run and say nothing about risk. Replacing them keeps
+ * the reviewer prompt focused and makes the verdict cache key stable, so a replayed scenario hits the verdict from the first run.
+ */
+const VOLATILE_ID_KEYS = /^(capture_id|order_id|invoice_id|refund_id|transaction_id|payout_batch_id|id)$/i;
+export function redactVolatileIds(args: Record<string, unknown>): Record<string, unknown> {
+  const walk = (v: unknown, depth: number): unknown => {
+    if (depth > 6) return v;
+    if (Array.isArray(v)) return v.map((x) => walk(x, depth + 1));
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, typeof x === "string" && VOLATILE_ID_KEYS.test(k) ? "<paypal-id>" : walk(x, depth + 1)]));
+    return v;
+  };
+  return walk(args, 0) as Record<string, unknown>;
+}
+
 export function summarizePolicy(p: Policy): PolicySummary {
   return {
     currency_allowed: p.currency_allowed,
@@ -61,7 +76,7 @@ export function createPipelineHooks(deps: { repos: Repos; reviewer: Reviewer }):
         payeeStatus: payeeStatus(repos, ctx),
         reason: ctx.reason,
         source: ctx.source,
-        args: ctx.args,
+        args: redactVolatileIds(ctx.args),
         signals: trustSignals,
         ruleHits: ctx.ruleHits.map((h) => h.id),
         advisory: ctx.advisory,

@@ -78,6 +78,18 @@ describe("extractCall", () => {
     ["purser_payout missing amount", "purser_payout", { recipient_email: "a@b.co", currency: "USD" }, { amountMinor: null, currency: "USD", payeeEmail: "a@b.co" }],
     ["pay_order with amount", "pay_order", { order_id: "O1", amount: "40.00", currency_code: "USD" }, { amountMinor: 4000, currency: "USD", payeeEmail: null }],
     ["pay_order without amount is unknown", "pay_order", { order_id: "O1" }, { amountMinor: null, currency: null, payeeEmail: null }],
+    // The real PayPal MCP shapes (currencyCode / itemCost / taxPercent / shippingCost), read from the upstream tool schemas
+    ["MCP create_order: itemCost x quantity", "create_order", { currencyCode: "USD", items: [{ name: "Widget", quantity: 2, itemCost: 10.5, itemTotal: 21 }] }, { amountMinor: 2100, currency: "USD", payeeEmail: null }],
+    ["MCP create_order: adds taxPercent and shippingCost, ignores discount", "create_order", { currencyCode: "USD", items: [{ name: "Widget", quantity: 2, itemCost: 10.5, itemTotal: 21, taxPercent: 7 }], shippingCost: 3.25, discount: 5 }, { amountMinor: 2572, currency: "USD", payeeEmail: null }],
+    ["MCP create_order: a larger stated itemTotal wins (stricter for caps)", "create_order", { currencyCode: "USD", items: [{ name: "Widget", quantity: 1, itemCost: 10, itemTotal: 40 }] }, { amountMinor: 4000, currency: "USD", payeeEmail: null }],
+    ["MCP create_order: bad item cost is unknown", "create_order", { currencyCode: "USD", items: [{ name: "Widget", quantity: 1, itemCost: "lots" }] }, { amountMinor: null, currency: "USD", payeeEmail: null }],
+    ["MCP create_order: negative tax is unknown", "create_order", { currencyCode: "USD", items: [{ name: "W", quantity: 1, itemCost: 10, taxPercent: -5 }] }, { amountMinor: null, currency: "USD", payeeEmail: null }],
+    [
+      "MCP create_invoice: per-item tax and shipping_cost",
+      "create_invoice",
+      { currency_code: "USD", primary_recipients: [{ billing_info: { email_address: "b@x.com" } }], items: [{ name: "x", quantity: "3", unit_amount: { currency_code: "USD", value: "20.00" }, tax: { name: "VAT", percent: "10" } }], shipping_cost: { value: "5.00", currency_code: "USD" } },
+      { amountMinor: 7100, currency: "USD", payeeEmail: "b@x.com" },
+    ],
     ["non-object args", "purser_payout", "oops", { amountMinor: null, currency: null, payeeEmail: null }],
     ["null args", "create_order", null, { amountMinor: null, currency: null, payeeEmail: null }],
   ];

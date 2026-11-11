@@ -11,11 +11,15 @@ import { attemptRowToRecord } from "../events.js";
 import type { GatewayDeps } from "../gateway/pipeline.js";
 import { fromMinor } from "../money.js";
 import { defaultPolicy } from "../policy/defaults.js";
+import { parseScenarioId } from "@purser/agent";
 import { makeAdminGuard } from "./auth.js";
+import type { DemoRunner } from "./demo-run.js";
 import { registerPolicyRoutes, type AdminDeps } from "./policies.js";
 
 export interface AdminApiDeps extends AdminDeps {
   gateway: GatewayDeps;
+  /** Attack Lab runner. Without it POST /api/demo/run/:scenario answers 503. */
+  demo?: DemoRunner;
   /** SSE heartbeat period. Default 15 000 ms. */
   sseHeartbeatMs?: number;
 }
@@ -30,6 +34,7 @@ const AttemptsQuery = z.object({
 const ApprovalsQuery = z.object({ status: z.enum(["pending", "approved", "denied", "expired"]).optional() });
 const NewAgentBody = z.object({ name: z.string().min(1).max(80), mandate: z.string().max(500).optional() });
 const ScenarioParam = z.object({ scenario: z.string().min(1).max(40) });
+const RunScenarioBody = z.object({ mode: z.enum(["replay", "live"]).default("replay"), reset: z.boolean().default(true) }).strict();
 
 const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
 const parseJson = <T>(s: string | null, fallback: T): T => {
@@ -196,8 +201,17 @@ export function registerAdminApi(app: FastifyInstance, deps: AdminApiDeps): { cl
   app.post("/api/demo/run/:scenario", { preHandler: guard }, async (req, reply) => {
     const p = ScenarioParam.safeParse(req.params);
     if (!p.success) return bad(reply, p.error);
-    return reply.code(501).send({ error: "not_implemented", message: "Attack Lab scenarios arrive with the demo agent (a later prompt)." });
+    const id = parseScenarioId(p.data.scenario);
+    if (!id) return reply.code(404).send({ error: "unknown_scenario", message: "Scenarios are A, B, C and D." });
+    const b = RunScenarioBody.safeParse(req.body ?? {});
+    if (!b.success) return bad(reply, b.error);
+    if (!deps.demo) return reply.code(503).send({ error: "demo_not_configured", message: "The Attack Lab is not configured on this server." });
+    const r = deps.demo.start(id, { mode: b.data.mode, reset: b.data.reset });
+    if (!r.ok) return reply.code(r.code === "busy" ? 409 : r.code === "live_unavailable" ? 422 : 503).send({ error: r.code, message: r.message });
+    // The run continues in the background; progress arrives as scenario_log events on /api/events.
+    return reply.code(202).send({ run_id: r.run_id, scenario: r.scenario, mode: r.mode, events: "/api/events (scenario_log)" });
   });
+  app.get("/api/demo/status", { preHandler: guard }, async () => deps.demo?.status() ?? { running: null, last: null });
 
   // ---------- SSE ----------
   const streams = new Set<() => void>();
