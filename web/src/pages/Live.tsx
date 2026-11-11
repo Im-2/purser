@@ -6,6 +6,7 @@ import { useDrawer } from "../components/AttemptDrawer";
 const AttemptsGrid = lazy(() => import("../components/AttemptsGrid").then((m) => ({ default: m.AttemptsGrid })));
 import { StatsStrip } from "../components/StatsStrip";
 import { Skeleton } from "../components/ui";
+import { isDemo } from "../lib/api";
 import { useStore } from "../lib/store";
 import type { Decision } from "../lib/types";
 
@@ -41,7 +42,7 @@ export function LivePage() {
       <StatsStrip />
 
       <div className="mt-4 grid gap-4 min-[1700px]:grid-cols-[minmax(0,1fr)_330px]">
-        <section className="panel flex h-[calc(100vh-352px)] min-h-[420px] flex-col overflow-hidden min-[1700px]:h-[calc(100vh-282px)]" aria-label="Attempts">
+        <section className={`panel flex ${isDemo() ? "h-[calc(100vh-396px)]" : "h-[calc(100vh-352px)]"} min-h-[420px] flex-col overflow-hidden min-[1700px]:h-[calc(100vh-282px)]`} aria-label="Attempts">
           <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
             <div>
               <h1 className="text-[15px] font-medium leading-tight">Live decisions</h1>

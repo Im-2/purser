@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useActions } from "../lib/actions";
+import { isDemo } from "../lib/api";
 import { navigate, type RouteId } from "../lib/route";
 import { useStore } from "../lib/store";
 import { Logo } from "./Logo";
@@ -51,6 +52,7 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const pending = state.approvals.filter((a) => a.status === "pending").length;
+  const demo = isDemo();
   const frozen = state.globalFreeze || state.agents.some((a) => a.effective_status === "frozen");
 
   return (
@@ -96,6 +98,19 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
           <span className="hidden sm:inline">{frozen ? "FROZEN" : "KILL SWITCH"}</span>
         </button>
       </div>
+
+      {demo && (
+        <div className="mx-auto mt-2 flex max-w-[1800px] flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-lime-line bg-lime-soft px-4 py-1.5 text-[12.5px] text-dim" role="status">
+          <span className="inline-flex items-center gap-2 rounded-full bg-lime px-3 py-0.5 font-medium text-fg">
+            <span className="size-1.5 rounded-full bg-ink" />
+            Demo mode: replay, no real money
+          </span>
+          <span className="hidden sm:inline">Your own private sandbox, simulated PayPal.</span>
+          <button onClick={onLogout} className="focus-ring rounded-full px-2 py-0.5 font-medium text-accent-hi underline underline-offset-2 hover:text-fg">
+            Sign in with admin token for full access
+          </button>
+        </div>
+      )}
 
       <Modal open={confirm} onClose={() => setConfirm(false)} title="Freeze all agents" tone="danger">
         <div className="flex items-start gap-4">

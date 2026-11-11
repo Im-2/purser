@@ -45,7 +45,7 @@ An Attack Lab runs four scenarios from the dashboard: a poisoned invoice, struct
 ## Accomplishments
 
 - The same decision pipeline runs for the scripted agent, a live LLM agent and the dashboard's Attack Lab, and writes to one audit table.
-- 539 automated tests, including the rules engine, the pipeline with a mocked PayPal, webhook signature handling and reconciliation, plus a replay check (`pnpm demo:verify`) that runs all four scenarios with model calls disabled.
+- 565 automated tests, including the rules engine, the pipeline with a mocked PayPal, webhook signature handling and reconciliation, plus a replay check (`pnpm demo:verify`) that runs all four scenarios with model calls disabled.
 - Real sandbox money moves end to end: an approved escalation executes exactly once, and an out-of-band payout is caught by reconciliation.
 - Every decision is explainable on screen: the stage that decided, the rules hit, the signals with their evidence, the AI rationale and the upstream result.
 
@@ -81,6 +81,18 @@ An Attack Lab runs four scenarios from the dashboard: a poisoned invoice, struct
 | React, Vite, Tailwind CSS | The dashboard. |
 | Playwright (Edge) | Browser verification of the dashboard against the real backend (development only). |
 | Claude Code | The build tool: the code, tests and documentation were written with it from a spec. |
+
+## Testing instructions (for the Devpost "testing" field)
+
+No account or token is needed.
+
+1. Open the live URL and click **Open the dashboard** (or go to `/app`). The first load can take up to a minute: the free Render instance sleeps when idle.
+2. On the sign-in screen click **Try the demo**. This opens a private, one-hour, replay-only session: PayPal is simulated, the AI answers from a cache, and nothing you do affects anyone else or any real account.
+3. In **Attack Lab** run scenarios **D**, **A**, **B** and **C**. Then open **Approvals** to deny the held payout from A, look at **Live** (click a row for the full explanation), and try the **Kill switch**.
+4. Optional, for full access (live LLM agents, policy compile and apply, real sandbox payouts and webhooks): sign in with the admin token below instead.
+   Admin token: *(paste the token here in the Devpost field, not in the repo)*
+
+Policy compile/apply and reconciliation "Run now" are disabled in demo mode because they call the model and PayPal; the server returns 403 for them.
 
 ## Links
 

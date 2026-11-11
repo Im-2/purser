@@ -11,9 +11,10 @@ import { createPipelineHooks } from "./ai/hook.js";
 import { startApprovalSweeper } from "./approvals/service.js";
 import { createDemoRunner } from "./admin/demo-run.js";
 import { ensureSeeded, loadVerdictSeed } from "./bootstrap.js";
+import { DemoWorlds } from "./demo/worlds.js";
 import { makeLookalike } from "@purser/shared/lookalike";
 import { SEEDED_AGENT_ID } from "./policy/defaults.js";
-import { DisabledUpstream, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
+import { DisabledUpstream, cachedUpstreamTools, createPayPalClient, createUpstream, type UpstreamClient } from "./paypal/index.js";
 
 loadDotEnv();
 
@@ -62,7 +63,12 @@ const demo = createDemoRunner({
       : null,
 });
 
+// Judge demo mode: private, simulated, replay-only worlds. They never touch this process's database, PayPal client or model key.
+const demoWorlds = config.DEMO_MODE_ENABLED === "true" ? new DemoWorlds({ config, upstreamTools: () => cachedUpstreamTools(repos), ttlMs: config.DEMO_SESSION_TTL_MIN * 60_000, maxSessions: config.DEMO_MAX_SESSIONS }) : null;
+demoWorlds?.start();
+
 const app = buildApp(config, {
+  ...(demoWorlds ? { demoSessions: { worlds: demoWorlds, perIpLimit: config.DEMO_SESSIONS_PER_IP } } : {}),
   gateway,
   admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN, gateway, demo },
   webDist: path.join(repoRoot, "web", "dist"), // the built dashboard, if `pnpm --filter @purser/web build` has been run
@@ -91,6 +97,7 @@ if (paypal) {
 
 const shutdown = async () => {
   stopSweeper();
+  await demoWorlds?.closeAll();
   await app.close();
   await upstream.close().catch(() => undefined);
   process.exit(0);

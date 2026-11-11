@@ -9,10 +9,17 @@ export const scenarioC: ScenarioDef = {
   summary: "The agent keeps refunding the same capture. Velocity denies it, then the circuit breaker freezes the agent.",
   endsFrozen: true,
   async setup(ctx) {
-    if (!ctx.env.paypal) throw new Error("Scenario C needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to create a sandbox capture");
-    // A REAL sandbox capture, created the way a customer's card payment would be (no buyer redirect needed).
-    const cap = await createSandboxCapture(ctx.env.paypal);
-    ctx.log({ kind: "info", message: `Created a real sandbox capture of ${cap.amount} ${cap.currency} (order ${cap.orderId})`, data: { capture_id: cap.captureId } });
+    let cap: { amount: string; currency: string; orderId: string; captureId: string };
+    if (ctx.env.simulated) {
+      // Demo sessions never touch PayPal: a made-up capture id for the simulated gateway to refund.
+      cap = { amount: "10.00", currency: "USD", orderId: "SIM-ORDER", captureId: `SIMCAP${Math.random().toString(16).slice(2, 12).toUpperCase()}` };
+      ctx.log({ kind: "info", message: `Created a simulated capture of ${cap.amount} ${cap.currency} (demo mode: no PayPal call)`, data: { capture_id: cap.captureId } });
+    } else {
+      if (!ctx.env.paypal) throw new Error("Scenario C needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to create a sandbox capture");
+      // A REAL sandbox capture, created the way a customer's card payment would be (no buyer redirect needed).
+      cap = await createSandboxCapture(ctx.env.paypal);
+      ctx.log({ kind: "info", message: `Created a real sandbox capture of ${cap.amount} ${cap.currency} (order ${cap.orderId})`, data: { capture_id: cap.captureId } });
+    }
     const restore = await withPolicyChange(ctx, "C", (p) => {
       p.velocity = { max_count: 3, window_sec: 60 };
       p.breaker = { max_denies: 2, window_sec: 120 };

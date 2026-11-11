@@ -2,13 +2,32 @@ import { useState, type FormEvent } from "react";
 import { Backdrop } from "../components/Backdrop";
 import { LogoMark } from "../components/Logo";
 import { Button } from "../components/ui";
-import { ApiError, api, setToken } from "../lib/api";
+import { ApiError, api, setRole, setToken, takeLoginNotice } from "../lib/api";
 
 export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
   const [value, setValue] = useState("");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [notice] = useState(takeLoginNotice);
+
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const tryDemo = async () => {
+    setDemoBusy(true);
+    setDemoError(null);
+    try {
+      const r = await api<{ token: string }>("POST", "/api/demo-session", {}, "");
+      setToken(r.token);
+      setRole("demo");
+      onLogin(r.token);
+    } catch (err) {
+      const e2 = err as ApiError;
+      setDemoError(e2.status === 429 ? "Too many demo sessions from your network just now. Try again in a few minutes." : e2.status === 503 ? "Demo mode is not available on this server." : e2.message);
+    } finally {
+      setDemoBusy(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -19,6 +38,7 @@ export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
     try {
       await api("GET", "/api/stats", undefined, token); // the cheapest authenticated call: proves the token works
       setToken(token);
+      setRole("admin");
       onLogin(token);
     } catch (err) {
       const e2 = err as ApiError;
@@ -77,7 +97,8 @@ export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
                 {show ? "Hide" : "Show"}
               </button>
             </div>
-            {error ? (
+            {notice && !error && <p role="status" className="mt-3 rounded-[var(--radius-inner)] bg-escalate-soft px-3.5 py-2 text-[13px] text-escalate">{notice}</p>}
+          {error ? (
               <p id="token-error" role="alert" className="mt-3 text-[13px] text-deny">{error}</p>
             ) : (
               <p id="token-help" className="mt-3 text-[12.5px] leading-snug text-mute">It is the PURSER_ADMIN_TOKEN value in your server&apos;s .env. It stays in this tab only and is cleared when you close it.</p>
@@ -86,6 +107,19 @@ export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
               Connect
             </Button>
           </form>
+
+          <div className="rise mt-4 rounded-[var(--radius-card)] border border-lime-line bg-lime-soft p-5" style={{ "--i": 6 } as React.CSSProperties}>
+            <div className="text-[15px] font-medium text-fg">No token? Try the demo.</div>
+            <p className="mt-1 text-[13px] leading-snug text-dim">A private replay session for you alone: you can run all four attack scenarios and explore every page. Nothing touches PayPal, no money moves, and it expires after an hour.</p>
+            <Button type="button" tone="ghost" busy={demoBusy} onClick={tryDemo} className="mt-3 w-full">
+              Try the demo
+            </Button>
+            {demoError && (
+              <p role="alert" className="mt-2.5 text-[13px] text-deny">
+                {demoError}
+              </p>
+            )}
+          </div>
 
           <p className="mt-5 text-center text-xs text-mute">Sandbox only. No live PayPal credentials.</p>
         </div>

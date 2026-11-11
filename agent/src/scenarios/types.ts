@@ -12,6 +12,8 @@ export interface ScenarioEnv {
   northwindEmail: string;
   /** makeLookalike(acmeEmail): Acme's address with one character swapped. Never a real account, never receives money. */
   lookalike: string;
+  /** Demo sessions: no PayPal at all. Scenario C uses a simulated capture id instead of calling the Orders API. */
+  simulated?: boolean;
   /** Needed only by scenario C, to create a real sandbox capture. */
   paypal?: { clientId: string; clientSecret: string };
 }

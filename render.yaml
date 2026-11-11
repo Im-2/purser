@@ -37,6 +37,8 @@ services:
         value: openai/gpt-oss-120b
       - key: LLM_REASONING_EFFORT
         value: low
+      - key: DEMO_MODE_ENABLED
+        value: "true" # "Try the demo": isolated, simulated, replay-only judge sessions
       - key: DATABASE_PATH
         value: ./data/purser.db
       - key: LOG_LEVEL

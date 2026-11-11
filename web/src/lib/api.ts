@@ -16,8 +16,43 @@ export const setToken = (t: string): void => {
     // storage blocked: the session just will not survive a reload
   }
 };
+const ROLE_KEY = "purser_role";
+/** "demo" for a judge's Try-the-demo session, "admin" for the admin token. Only a hint for the UI: the server enforces what each token may do. */
+export const getRole = (): "admin" | "demo" => {
+  try {
+    return sessionStorage.getItem(ROLE_KEY) === "demo" ? "demo" : "admin";
+  } catch {
+    return "admin";
+  }
+};
+export const setRole = (r: "admin" | "demo"): void => {
+  try {
+    sessionStorage.setItem(ROLE_KEY, r);
+  } catch {
+    // ignore
+  }
+};
+export const isDemo = (): boolean => getRole() === "demo";
+const NOTICE_KEY = "purser_login_notice";
+export const setLoginNotice = (m: string): void => {
+  try {
+    sessionStorage.setItem(NOTICE_KEY, m);
+  } catch {
+    // ignore
+  }
+};
+export const takeLoginNotice = (): string | null => {
+  try {
+    const m = sessionStorage.getItem(NOTICE_KEY);
+    sessionStorage.removeItem(NOTICE_KEY);
+    return m;
+  } catch {
+    return null;
+  }
+};
 export const clearToken = (): void => {
   try {
+    sessionStorage.removeItem(ROLE_KEY);
     sessionStorage.removeItem(KEY);
   } catch {
     // ignore

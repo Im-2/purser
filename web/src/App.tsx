@@ -4,7 +4,7 @@ import { FrozenBanner } from "./components/FrozenBanner";
 import { Header, Rail } from "./components/Header";
 import { Backdrop } from "./components/Backdrop";
 import { HowItWorks } from "./components/HowItWorks";
-import { UNAUTHORIZED_EVENT, clearToken, getToken } from "./lib/api";
+import { UNAUTHORIZED_EVENT, clearToken, getToken, isDemo, setLoginNotice } from "./lib/api";
 import { useRoute } from "./lib/route";
 import { StoreProvider, useStore } from "./lib/store";
 import { ToastProvider } from "./lib/toast";
@@ -64,8 +64,12 @@ export function App() {
 
   // any 401 from the API (token rotated, server restarted with a new one) returns to the login screen
   useEffect(() => {
-    window.addEventListener(UNAUTHORIZED_EVENT, logout);
-    return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
+    const onUnauthorized = () => {
+      if (isDemo()) setLoginNotice("Your demo session expired. Start a new one, or sign in with the admin token.");
+      logout();
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, [logout]);
 
   return (

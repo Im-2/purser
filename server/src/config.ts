@@ -33,6 +33,11 @@ export const EnvSchema = z.object({
   UPSTREAM_MODE: z.preprocess(emptyToUndef, z.enum(["stdio", "npx", "off"]).default("stdio")),
   /** Render sets this to the service URL. It is the fallback for PUBLIC_URL, so the final hostname is never hard-coded. */
   RENDER_EXTERNAL_URL: optStr,
+  /** Judge demo mode: isolated, simulated, replay-only sessions (POST /api/demo-session). */
+  DEMO_MODE_ENABLED: z.preprocess(emptyToUndef, z.enum(["true", "false"]).default("true")),
+  DEMO_SESSION_TTL_MIN: z.preprocess(emptyToUndef, z.coerce.number().min(1).max(480).default(60)),
+  DEMO_MAX_SESSIONS: z.preprocess(emptyToUndef, z.coerce.number().int().min(1).max(200).default(20)),
+  DEMO_SESSIONS_PER_IP: z.preprocess(emptyToUndef, z.coerce.number().int().min(1).max(100).default(8)),
   NODE_ENV: optStr,
   LOG_LEVEL: z.preprocess(emptyToUndef, z.string().default("info")),
 });

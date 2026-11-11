@@ -7,8 +7,11 @@ import { registerAdminApi } from "./admin/api.js";
 import { registerReconciliationRoutes } from "./reconciliation/routes.js";
 import { registerWeb } from "./web.js";
 import type { DemoRunner } from "./admin/demo-run.js";
+import { registerDemoRoutes, type DemoRoutesOptions } from "./demo/routes.js";
 
 export interface AppOptions {
+  /** Judge demo mode (POST /api/demo-session and the demo-token proxy). Omit to disable it. */
+  demoSessions?: DemoRoutesOptions;
   /** Directory of the built dashboard (web/dist). When it exists it is served at /. */
   webDist?: string;
   /** When provided, the MCP gateway is mounted at /mcp. */
@@ -65,6 +68,9 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
         .send();
     }
   });
+
+  // Demo-token requests are decided before any real route sees them (see demo/routes.ts).
+  if (opts.demoSessions) registerDemoRoutes(app, opts.demoSessions);
 
   app.get("/health", async () => ({
     status: "ok",

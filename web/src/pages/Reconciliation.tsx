@@ -2,7 +2,7 @@ import { Suspense, lazy, useMemo, useState } from "react";
 import { KIND_LABEL, TypeChip, kindOf, type RowKind } from "../components/ReconChips";
 import { IconScale } from "../components/icons";
 import { Button, Modal, Skeleton } from "../components/ui";
-import { ApiError, post } from "../lib/api";
+import { ApiError, isDemo, post } from "../lib/api";
 import { relTime } from "../lib/format";
 import { useStore } from "../lib/store";
 import { useToast } from "../lib/toast";
@@ -58,6 +58,7 @@ function FindingModal({ f, onClose }: { f: ReconFinding | null; onClose: () => v
 export function ReconciliationPage() {
   const { state, setReconRun, refreshRecon } = useStore();
   const toast = useToast();
+  const demo = isDemo();
   const [kind, setKind] = useState<"all" | RowKind>("all");
   const [running, setRunning] = useState(false);
   const [open, setOpen] = useState<ReconFinding | null>(null);
@@ -108,7 +109,7 @@ export function ReconciliationPage() {
               <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${STATUS[run.transaction_search.status].cls}`}>{STATUS[run.transaction_search.status].label}</span>
             </div>
           )}
-          <Button tone="primary" size="lg" busy={running} onClick={runNow}>
+          <Button tone="primary" size="lg" busy={running} disabled={demo} title={demo ? "Run now talks to PayPal, so it needs the admin token" : undefined} onClick={runNow}>
             <IconScale size={15} /> {running ? "Running..." : "Run now"}
           </Button>
         </div>

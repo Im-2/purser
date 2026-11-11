@@ -4,6 +4,7 @@ import { DecisionChip, ModeChip, SignalChip, StageChip } from "../components/Chi
 import { IconAlert, IconBolt, IconCheck, IconFlask, IconPlay, IconReset, IconRobot, IconShield, IconX } from "../components/icons";
 import { Button, EmptyState, Segmented } from "../components/ui";
 import { useActions } from "../lib/actions";
+import { isDemo } from "../lib/api";
 import { money } from "../lib/format";
 import { navigate } from "../lib/route";
 import { useStore } from "../lib/store";
@@ -177,7 +178,7 @@ export function AttackLabPage() {
             onChange={setMode}
             options={[
               { value: "replay", label: "Replay", hint: "A scripted agent. Same decisions every time." },
-              { value: "live", label: "Live", hint: "A real LLM agent reads the fixtures and decides for itself." },
+              { value: "live", label: "Live", hint: isDemo() ? "Live agents need the admin token. Demo sessions are replay only." : "A real LLM agent reads the fixtures and decides for itself.", disabled: isDemo() },
             ]}
           />
         </div>

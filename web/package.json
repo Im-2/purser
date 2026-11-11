@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "verify:ui": "node scripts/verify-ui.mjs",
-    "verify:ui:b": "node scripts/verify-ui-b.mjs"
+    "verify:ui:b": "node scripts/verify-ui-b.mjs",
+    "verify:demo": "node scripts/verify-demo.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

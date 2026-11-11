@@ -114,26 +114,38 @@ Each runs in **replay** (a scripted agent, cached AI verdicts: same result every
 
 - Agent API keys are stored hashed; the admin API requires a bearer token (and is disabled if none is set).
 - Reviewer prompts treat agent-supplied strings as untrusted data, delimited and labelled; output is schema-validated.
-- The rule engine is pure and deterministic and has unit tests; there are 539 automated tests in total (510 server, 27 agent).
+- The rule engine is pure and deterministic and has unit tests; there are 565 automated tests in total (510 server, 27 agent).
 - Fail closed everywhere: unknown tool, unknown amount, reviewer error, upstream error before execution.
 - Idempotency: executed calls carry an idempotency key (`PayPal-Request-Id`) and approvals use an atomic claim, so retries cannot double-pay.
 - Webhooks are verified through PayPal's `verify-webhook-signature` endpoint before any reconciliation write; without a configured webhook id they are refused.
 - In production (`NODE_ENV=production`) the dev-only webhook simulator is not registered, CORS allows only the public URL, and request logs never contain tokens or query strings. A secret scanner (`pnpm check:secrets`, also a pre-push hook) blocks commits and pushes that contain secret values.
+- Judge demo sessions are isolated, simulated and replay-only, and restricted by a server-side allowlist (see below).
 - Responses to agents never reveal thresholds or allowlists.
 
 ## Try the hosted demo (for judges)
 
-The demo runs on Render's free plan, so it **sleeps when idle: the first request can take up to a minute to wake it.** The disk is ephemeral: each restart resets it to the seeded demo state, which is the intended starting point.
+**No token needed.** The demo runs on Render's free plan, so it sleeps when idle: the first request can take up to a minute to wake it.
 
-1. Open the live URL (in the Devpost submission): the landing page is at `/` and the dashboard at `/app`. Open the dashboard and sign in with the **admin token** given in the Devpost testing instructions (sandbox-only).
-2. **Attack Lab** > keep **Replay** selected > run **D** (an allowed $120 payout lands in the ledger), then **A** (the poisoned invoice is held).
-3. **Approvals**: open the held payout, read why Purser flagged it, and press **Deny**.
-4. **Live** shows every decision; click a row for the full explanation.
-5. Press the **Kill switch** to see the frozen banner, then **Unfreeze**.
-6. **Policies**: compile "Allow up to $50 a day on office supplies, refunds up to $30, never pay new vendors without asking", read the diff and warnings, and (optionally) Apply. Use Attack Lab > **Reset demo** afterwards to restore the seeded policy.
-7. **Reconciliation** > **Run now**.
+1. Open the live URL (in the Devpost submission). The landing page is at `/`; click **Open the dashboard** (or go to `/app`).
+2. On the sign-in screen click **Try the demo**. You get a private session that lasts an hour.
+3. **Attack Lab**: run **D** (an allowed $120 payout), **A** (the poisoned invoice is held for a human), **B** (structuring is blocked) and **C** (a runaway loop is blocked and the agent frozen).
+4. **Approvals**: open the held payout, read why Purser flagged it, and press **Deny**.
+5. **Live** shows every decision; click a row for the full explanation. Try the **Kill switch**, then **Unfreeze**.
+6. **Policies** and **Reconciliation** show the active policy and findings; compiling a policy and running reconciliation need the admin token (they call the model and PayPal).
 
-Replay mode uses a shipped cache of AI verdicts, so it works without calling the model. Scenario D moves $120 of sandbox money; scenario A moves none.
+Full access with the **admin token** is optional: it is the same dashboard with live LLM agents, policy compile and apply, and the real PayPal sandbox (real $120 / $160 payouts, real webhooks). The token is in the Devpost testing instructions if you want it; the demo needs nothing.
+
+### Judge demo mode: what it is, and what it cannot do
+
+`POST /api/demo-session` (no credentials, rate limited per client address) creates a **private demo world** for one visitor: its own in-memory database, event bus, gateway, policy, approvals and Attack Lab runner. Inside it:
+
+- **PayPal is simulated.** The normal PayPal client runs against an in-process stand-in (`server/src/demo/sim.ts`) that answers token, payout, payout-batch and capture requests itself, so no request to PayPal is ever made, and any request it does not model is refused and recorded. Money never moves.
+- **The AI reviewer answers from the shipped verdict cache only** (`AI_MODE=cached_only` semantics, no model, no API key). Live LLM agents are impossible by construction.
+- **Isolated.** Two visitors cannot see or disturb each other, and nothing a visitor does touches the real ledger, the real policy, the real approvals or the real kill switch.
+
+The session token is `dm_` plus 256 random bits and expires after an hour (`DEMO_SESSION_TTL_MIN`); at most `DEMO_MAX_SESSIONS` (20) exist at once, one client address may open `DEMO_SESSIONS_PER_IP` (8) per 10 minutes, and there is a global backstop (the address comes from `X-Forwarded-For`, which can be spoofed, hence the global cap).
+
+**Enforced on the server, not by hiding buttons.** Every `/api` request that carries a demo token is decided in `server/src/demo/routes.ts` against a method-and-path allowlist before any real route or auth check sees it; everything not listed gets **403**. A demo token can: view every dashboard endpoint and the event stream; run scenarios A to D in **replay** mode; reset **its own** world; and use the approval queue and kill switch **inside its own world**. It cannot: compile or apply policies, create agents, run reconciliation, send simulated webhooks, run a live-mode scenario, call `/mcp`, or reach any admin endpoint of the real system. `server/test/demo-session.test.ts` lists the forbidden endpoints, proves two sessions are isolated and the real database is untouched, and asserts that a full A-to-D replay makes no request to PayPal or a model provider. `pnpm --filter @purser/web verify:demo` checks the same against a running server, including that the PayPal sandbox balance does not change and that the admin token login still has full access.
 
 ## Run it yourself in 5 minutes (Windows, macOS, Linux)
 
@@ -178,7 +190,7 @@ To serve the built dashboard from the server instead of Vite: `pnpm --filter @pu
 
 All of it, from an empty repository, with Claude Code as the build tool:
 
-- The MCP gateway, the decision pipeline and the pure rules engine, with 539 automated tests.
+- The MCP gateway, the decision pipeline and the pure rules engine, with 565 automated tests.
 - The payee trust signals (including look-alike detection that weighs the local part of an address) and the tighten-only AI reviewer with its verdict cache and replay mode.
 - The plain-English policy compiler with diff and warnings, and versioned policies.
 - Human approvals with exactly-once execution, the kill switch, and the circuit breaker.

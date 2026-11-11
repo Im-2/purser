@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState, Button, Segmented, Skeleton } from "../components/ui";
 import { IconAlert, IconCheck, IconSliders } from "../components/icons";
-import { ApiError, get, post } from "../lib/api";
+import { ApiError, get, isDemo, post } from "../lib/api";
 import { relTime } from "../lib/format";
 import { useStore } from "../lib/store";
 import { useToast } from "../lib/toast";
@@ -98,6 +98,7 @@ export function PoliciesPage() {
   const { state } = useStore();
   const toast = useToast();
   const agents = state.agents;
+  const demo = isDemo();
   const [agentId, setAgentId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [policy, setPolicy] = useState<PolicyState | null>(null);
@@ -217,10 +218,10 @@ export function PoliciesPage() {
                 ))}
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <Button tone="primary" size="lg" busy={compiling} disabled={!text.trim() || !agent} onClick={compile}>
+                <Button tone="primary" size="lg" busy={compiling} disabled={!text.trim() || !agent || demo} onClick={compile}>
                   Compile
                 </Button>
-                <span className="text-[12.5px] text-mute">Compiling only proposes a policy. It never changes what is live.</span>
+                <span className="text-[12.5px] text-mute">{demo ? "Compiling and applying policies needs the admin token. You can still read the active policy." : "Compiling only proposes a policy. It never changes what is live."}</span>
                 <span className="num ml-auto text-[11px] text-mute">{text.length}/2000</span>
               </div>
               {compileErr && (
