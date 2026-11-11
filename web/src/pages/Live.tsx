@@ -41,25 +41,25 @@ export function LivePage() {
       <StatsStrip />
 
       <div className="mt-4 grid gap-4 min-[1700px]:grid-cols-[minmax(0,1fr)_330px]">
-        <section className="panel flex h-[calc(100vh-375px)] min-h-[440px] flex-col overflow-hidden min-[1700px]:h-[calc(100vh-282px)]" aria-label="Attempts">
+        <section className="panel flex h-[calc(100vh-392px)] min-h-[420px] flex-col overflow-hidden min-[1700px]:h-[calc(100vh-282px)]" aria-label="Attempts">
           <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
             <div>
-              <h1 className="text-[15px] font-semibold leading-tight">Live decisions</h1>
+              <h1 className="text-[15px] font-medium leading-tight">Live decisions</h1>
               <p className="text-xs text-mute">Purser keeps the books. Click any row to see why.</p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2.5">
-              <div role="radiogroup" aria-label="Filter by decision" className="inline-flex rounded-lg border border-line-strong bg-sunken p-0.5">
+              <div role="radiogroup" aria-label="Filter by decision" className="inline-flex rounded-full border border-line-strong bg-sunken p-1">
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
                     role="radio"
                     aria-checked={decision === f.id}
                     onClick={() => setDecision(f.id)}
-                    className={`focus-ring flex items-center gap-2 rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition ${decision === f.id ? "bg-raised text-fg shadow" : "text-dim hover:text-fg"}`}
+                    className={`focus-ring flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition ${decision === f.id ? "bg-ink text-on-ink shadow-pill" : "text-dim hover:bg-hover hover:text-fg"}`}
                   >
                     <span className={`size-2 rounded-full ${f.dot}`} />
                     {f.label}
-                    <span className="num text-[11px] text-mute">{counts[f.id]}</span>
+                    <span className="num text-[11px] opacity-60">{counts[f.id]}</span>
                   </button>
                 ))}
               </div>
@@ -68,7 +68,7 @@ export function LivePage() {
                 onChange={(e) => setQuick(e.target.value)}
                 placeholder="Search payee, tool, signal..."
                 aria-label="Search attempts"
-                className="focus-ring h-9 w-56 rounded-lg border border-line-strong bg-sunken px-3 text-[13px] text-fg placeholder:text-mute"
+                className="focus-ring h-10 w-60 rounded-full border border-line-strong bg-sunken px-4 text-[13px] text-fg placeholder:text-mute"
               />
             </div>
           </div>

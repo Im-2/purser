@@ -13,8 +13,8 @@ import { useNow } from "../lib/useNow";
 function Quote({ k, children }: { k: string; children: string | null }) {
   return (
     <div>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-mute">{k}</div>
-      <p className="rounded-lg border-l-2 border-accent/60 bg-sunken px-3.5 py-2.5 text-[14px] leading-relaxed text-fg/90">{children ?? <span className="text-mute">None given</span>}</p>
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-mute">{k}</div>
+      <p className="rounded-2xl border-l-2 border-lime-line bg-lime-soft px-3.5 py-2.5 text-[14px] leading-relaxed text-fg/90">{children ?? <span className="text-mute">None given</span>}</p>
     </div>
   );
 }
@@ -36,19 +36,19 @@ function PendingCard({ ap }: { ap: ApprovalItem }) {
   };
 
   return (
-    <article className={`panel animate-rise overflow-hidden ${lookalike ? "border-escalate/40" : ""}`} aria-label={`Approval ${ap.approval_id}`}>
+    <article className={`panel rise overflow-hidden ${lookalike ? "border-escalate-line" : ""}`} aria-label={`Approval ${ap.approval_id}`}>
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <DecisionChip decision="escalate" />
             <span className="num text-[13px] text-dim">{a?.tool ?? "tool call"}</span>
           </div>
-          <div className="num mt-3 text-[2.4rem] font-semibold leading-none">{a ? (a.amount === null ? "amount unknown" : money(a.amount, a.currency)) : "..."}</div>
+          <div className="num mt-3 text-[2.4rem] font-medium leading-none">{a ? (a.amount === null ? "amount unknown" : money(a.amount, a.currency)) : "..."}</div>
           <div className="num mt-2 break-all text-[15px] text-fg">{a?.payee_email ?? "no payee"}</div>
         </div>
-        <div className={`rounded-xl border px-4 py-3 text-right ${urgent ? "border-deny/50 bg-deny/8" : "border-line-strong bg-raised/60"}`}>
+        <div className={`rounded-[22px] border px-4 py-3 text-right ${urgent ? "border-deny-line bg-deny-soft" : "border-line-strong bg-raised/60"}`}>
           <div className="eyebrow flex items-center justify-end gap-1.5"><IconClock size={12} /> expires in</div>
-          <div className={`num mt-1 text-[1.75rem] font-semibold leading-none ${urgent ? "text-deny" : "text-fg"}`}>{countdown(left)}</div>
+          <div className={`num mt-1 text-[1.75rem] font-medium leading-none ${urgent ? "text-deny" : "text-fg"}`}>{countdown(left)}</div>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ function PendingCard({ ap }: { ap: ApprovalItem }) {
         </div>
         <div className="space-y-4">
           <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-mute">Purser flagged</div>
+            <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-mute">Purser flagged</div>
             {a && a.signals_detail.length > 0 ? (
               <ul className="space-y-2">
                 {a.signals_detail.map((s, i) => (
@@ -75,7 +75,7 @@ function PendingCard({ ap }: { ap: ApprovalItem }) {
           </div>
           {a?.ai && (
             <div>
-              <div className="mb-2 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
+              <div className="mb-2 flex items-center gap-3 text-[11px] font-medium uppercase tracking-wider text-mute">
                 AI reviewer <RiskMeter risk={a.ai.risk} />
               </div>
               <p className="text-[13.5px] leading-relaxed text-dim">{a.ai.rationale}</p>
@@ -91,12 +91,12 @@ function PendingCard({ ap }: { ap: ApprovalItem }) {
         <Button tone="deny" size="lg" busy={busy === "deny"} disabled={busy !== null || left <= 0} onClick={() => act("deny")} className="min-w-40 flex-1 sm:flex-none">
           <IconX size={18} strokeWidth={2.6} /> Deny
         </Button>
-        <button onClick={() => a && drawer.open(a.id)} className="focus-ring ml-auto rounded-lg px-3 py-2 text-[13px] font-medium text-dim transition hover:bg-hover hover:text-fg">
+        <button onClick={() => a && drawer.open(a.id)} className="focus-ring ml-auto rounded-2xl px-3 py-2 text-[13px] font-medium text-dim transition hover:bg-hover hover:text-fg">
           Full explanation
         </button>
       </div>
       {lookalike && (
-        <div className="border-t border-escalate/30 bg-escalate/8 px-6 py-2.5 text-[12.5px] text-escalate">
+        <div className="border-t border-escalate-line bg-escalate-soft px-6 py-2.5 text-[12.5px] text-escalate">
           The payee address closely resembles a known vendor's. Approving sends real money to it.
         </div>
       )}
@@ -104,16 +104,16 @@ function PendingCard({ ap }: { ap: ApprovalItem }) {
   );
 }
 
-const STATUS_TONE = { approved: "text-allow bg-allow/15", denied: "text-deny bg-deny/15", expired: "text-dim bg-raised", pending: "text-escalate bg-escalate/15" } as const;
+const STATUS_TONE = { approved: "text-allow bg-allow-soft", denied: "text-deny bg-deny-soft", expired: "text-dim bg-raised", pending: "text-escalate bg-escalate-soft" } as const;
 
 function ResolvedRow({ ap }: { ap: ApprovalItem }) {
   const drawer = useDrawer();
   const a = ap.attempt;
   return (
     <li>
-      <button onClick={() => a && drawer.open(a.id)} className="focus-ring grid w-full grid-cols-[96px_1fr_auto] items-center gap-4 rounded-xl border border-transparent px-4 py-3 text-left transition hover:border-line hover:bg-raised/60 sm:grid-cols-[96px_130px_1fr_auto]">
-        <span className={`w-fit rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${STATUS_TONE[ap.status]}`}>{ap.status}</span>
-        <span className="num hidden text-[14px] font-semibold sm:block">{a ? money(a.amount, a.currency) : ""}</span>
+      <button onClick={() => a && drawer.open(a.id)} className="focus-ring grid w-full grid-cols-[96px_1fr_auto] items-center gap-4 rounded-[22px] border border-transparent px-4 py-3 text-left transition hover:border-line hover:bg-raised/60 sm:grid-cols-[96px_130px_1fr_auto]">
+        <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${STATUS_TONE[ap.status]}`}>{ap.status}</span>
+        <span className="num hidden text-[14px] font-medium sm:block">{a ? money(a.amount, a.currency) : ""}</span>
         <span className="num min-w-0 truncate text-[13px] text-dim">{a?.payee_email ?? ""}</span>
         <span className="num text-right text-[12px] text-mute">
           {ap.decided_at ? `${clock(ap.decided_at)} · ${relTime(ap.decided_at)}` : relTime(ap.expires_at)}
@@ -133,7 +133,7 @@ export function ApprovalsPage() {
     <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Approvals</h1>
+          <h1 className="text-xl font-medium tracking-tight">Approvals</h1>
           <p className="mt-1 text-sm text-dim">Calls Purser would not decide alone. Approving executes the stored call exactly once.</p>
         </div>
         <span className="num rounded-full border border-line-strong px-3 py-1 text-xs text-dim">{pending.length} pending</span>

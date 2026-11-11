@@ -8,3 +8,6 @@ data/
 .vite/
 coverage/
 .env.local
+
+# third-party design reference media (not ours to redistribute)
+ui/

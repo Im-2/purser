@@ -48,3 +48,15 @@ export const IconUser = ({ size = 16, ...p }: P) => (
 export const IconRobot = ({ size = 16, ...p }: P) => (
   <svg {...base(size, p)}><rect x="4" y="8" width="16" height="11" rx="3" /><path d="M12 8V4.5M9 13v1.5M15 13v1.5" /><circle cx="12" cy="3.5" r="1" /></svg>
 );
+export const IconPulse = ({ size = 16, ...p }: P) => (
+  <svg {...base(size, p)}><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></svg>
+);
+export const IconInbox = ({ size = 16, ...p }: P) => (
+  <svg {...base(size, p)}><path d="M4 13.5 6.5 5h11L20 13.5V19H4v-5.5Z" /><path d="M4 13.5h4.5l1 2.5h5l1-2.5H20" /></svg>
+);
+export const IconSliders = ({ size = 16, ...p }: P) => (
+  <svg {...base(size, p)}><path d="M5 6h9M18 6h1M5 12h3M12 12h7M5 18h11M20 18h-1" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
+);
+export const IconScale = ({ size = 16, ...p }: P) => (
+  <svg {...base(size, p)}><path d="M12 4v16M7 20h10M5 8h14" /><path d="m5 8-2.5 6a3 3 0 0 0 5 0L5 8ZM19 8l-2.5 6a3 3 0 0 0 5 0L19 8Z" /></svg>
+);

@@ -13,7 +13,7 @@ function FreezeReason({ a }: { a: AgentInfo }) {
   const text =
     f?.reason === "circuit_breaker" ? `Circuit breaker: ${d?.denies ?? "several"} denies in ${d?.window_sec ?? "?"}s` : f?.reason === "freeze_all" ? "Kill switch pressed" : f?.reason === "admin" ? "Frozen by an operator" : "Frozen";
   return (
-    <div className="mt-2 rounded-lg border border-deny/35 bg-deny/8 px-2.5 py-1.5 text-xs text-deny">
+    <div className="mt-2 rounded-2xl border border-deny-line bg-deny-soft px-2.5 py-1.5 text-xs text-deny">
       {text}
       {f?.at && <span className="text-deny/70"> · {relTime(f.at)}</span>}
     </div>
@@ -27,7 +27,7 @@ export function AgentsPanel() {
 
   return (
     <section className="panel p-3 min-[1700px]:p-4" aria-label="Agents">
-      <div className="mb-2 flex items-center justify-between min-[1700px]:mb-3">
+      <div className="mb-2 hidden items-center justify-between min-[1700px]:mb-3 min-[1700px]:flex">
         <h2 className="eyebrow">Agents</h2>
         <span className="num text-xs text-mute">{state.agents.length}</span>
       </div>
@@ -39,22 +39,22 @@ export function AgentsPanel() {
       )}
       {state.ready && state.agents.length === 0 && <p className="py-4 text-sm text-dim">No agents yet. Seed one with <span className="num text-fg">pnpm --filter @purser/server seed</span>.</p>}
 
-      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1700px]:grid-cols-1">
+      <ul className="flex flex-wrap gap-3 min-[1700px]:flex-col">
         {state.agents.map((a) => {
           const frozen = a.effective_status === "frozen";
           return (
-            <li key={a.id} className={`rounded-xl border p-3 transition ${frozen ? "border-deny/40 bg-deny/5" : "border-line bg-raised/50"}`}>
+            <li key={a.id} className={`min-w-[340px] max-w-[560px] flex-1 min-[1700px]:min-w-0 min-[1700px]:max-w-none rounded-[22px] border px-4 py-3 transition ${frozen ? "border-deny-line bg-deny-soft/50" : "border-line bg-raised/50"}`}>
               <div className="flex items-start gap-3">
-                <div className={`grid size-9 shrink-0 place-items-center rounded-lg border ${frozen ? "border-deny/40 text-deny" : "border-accent/40 text-accent-hi"} bg-sunken`}>
+                <div className={`grid size-9 shrink-0 place-items-center rounded-2xl border ${frozen ? "border-deny-line text-deny" : "border-lime-line text-accent-hi"} bg-sunken`}>
                   <IconRobot size={17} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">{a.name}</span>
-                    <span className={`rounded px-1.5 py-px text-[10px] font-bold uppercase tracking-wider ${frozen ? "bg-deny/20 text-deny" : "bg-allow/15 text-allow"}`}>{frozen ? "frozen" : "active"}</span>
+                    <span className="truncate text-sm font-medium">{a.name}</span>
+                    <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider ${frozen ? "bg-deny-soft text-deny" : "bg-allow-soft text-allow"}`}>{frozen ? "frozen" : "active"}</span>
                   </div>
                   <div className="num mt-0.5 truncate text-[11px] text-mute">{a.id}</div>
-                  {a.mandate && <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-dim">{a.mandate}</p>}
+                  {a.mandate && <p className="mt-1 line-clamp-1 min-[1700px]:line-clamp-2 text-xs leading-snug text-dim">{a.mandate}</p>}
                 </div>
                 <Switch
                   checked={frozen}

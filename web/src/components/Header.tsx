@@ -1,17 +1,17 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useActions } from "../lib/actions";
 import { navigate, type RouteId } from "../lib/route";
 import { useStore } from "../lib/store";
 import { Logo } from "./Logo";
-import { IconInfo, IconSignOut, IconSnow } from "./icons";
-import { Button, Modal } from "./ui";
+import { IconInbox, IconFlask, IconInfo, IconPulse, IconScale, IconSignOut, IconSliders, IconSnow } from "./icons";
+import { Button, Modal, RoundButton } from "./ui";
 
-const NAV: { id: RouteId; label: string; soon?: boolean }[] = [
-  { id: "live", label: "Live" },
-  { id: "approvals", label: "Approvals" },
-  { id: "lab", label: "Attack Lab" },
-  { id: "policies", label: "Policies", soon: true },
-  { id: "reconciliation", label: "Reconciliation", soon: true },
+const NAV: { id: RouteId; label: string; icon: ReactNode; soon?: boolean }[] = [
+  { id: "live", label: "Live", icon: <IconPulse size={15} /> },
+  { id: "approvals", label: "Approvals", icon: <IconInbox size={15} /> },
+  { id: "lab", label: "Attack Lab", icon: <IconFlask size={15} /> },
+  { id: "policies", label: "Policies", icon: <IconSliders size={15} />, soon: true },
+  { id: "reconciliation", label: "Reconciliation", icon: <IconScale size={15} />, soon: true },
 ];
 
 function ConnectionPill() {
@@ -19,10 +19,29 @@ function ConnectionPill() {
   const c = state.conn;
   const tone = c === "live" ? "text-allow" : c === "connecting" ? "text-dim" : "text-escalate";
   return (
-    <span className={`hidden items-center gap-2 rounded-full border border-line px-3 py-1 text-xs font-medium md:inline-flex ${tone}`} title="Server-sent events connection">
+    <span className={`hidden items-center gap-2 rounded-full border border-line-strong bg-panel px-3.5 py-2 text-xs font-medium xl:inline-flex ${tone}`} title="Server-sent events connection">
       <span className={`size-2 rounded-full bg-current ${c === "live" ? "animate-pulse-ring" : ""}`} />
       {c === "live" ? "Live" : c === "connecting" ? "Connecting" : "Reconnecting"}
     </span>
+  );
+}
+
+/** Thin vertical icon rail on the left (wide screens): the same destinations as the top nav, icon only. */
+export function Rail({ route }: { route: RouteId }) {
+  return (
+    <nav aria-label="Quick navigation" className="glass fixed left-4 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-full p-2 min-[1280px]:flex">
+      {NAV.map((n) => (
+        <button
+          key={n.id}
+          onClick={() => navigate(n.id)}
+          aria-label={n.label}
+          title={n.label + (n.soon ? " (coming next)" : "")}
+          className={`focus-ring grid size-10 place-items-center rounded-full transition duration-[var(--duration-fast)] ${route === n.id ? "bg-lime text-fg shadow-soft" : "text-mute hover:bg-hover hover:text-fg"}`}
+        >
+          {n.icon}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -35,13 +54,13 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
   const frozen = state.globalFreeze || state.agents.some((a) => a.effective_status === "frozen");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-base/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1800px] items-center gap-3 px-4 sm:px-6">
-        <a href="#/live" className="focus-ring mr-1 rounded-lg sm:mr-4" aria-label="Purser home">
-          <Logo />
+    <header className="sticky top-0 z-40 px-4 pt-3 sm:px-6">
+      <div className="glass mx-auto flex min-h-[68px] max-w-[1800px] flex-wrap items-center gap-x-3 gap-y-2 rounded-[34px] px-3 py-2 pl-5 md:flex-nowrap md:py-0">
+        <a href="#/live" className="focus-ring mr-auto shrink-0 rounded-full md:mr-2" aria-label="Purser home">
+          <Logo size={34} />
         </a>
 
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" aria-label="Primary">
+        <nav className="order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-1 md:order-none md:w-auto md:flex-1 md:justify-center md:pb-0" aria-label="Primary">
           {NAV.map((n) => {
             const active = route === n.id;
             return (
@@ -49,43 +68,43 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
                 key={n.id}
                 onClick={() => navigate(n.id)}
                 aria-current={active ? "page" : undefined}
-                className={`focus-ring relative flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-[13.5px] font-semibold transition ${active ? "bg-raised text-fg" : "text-dim hover:bg-hover hover:text-fg"}`}
+                className={`focus-ring relative flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[13.5px] font-medium transition duration-[var(--duration-fast)] ${active ? "border-lime-line bg-lime text-fg" : "border-transparent text-dim hover:bg-hover hover:text-fg"}`}
               >
+                <span className={active ? "text-fg" : "text-mute"}>{n.icon}</span>
                 {n.label}
-                {n.id === "approvals" && pending > 0 && <span className="num grid min-w-5 place-items-center rounded-full bg-escalate px-1.5 text-[11px] font-bold leading-5 text-base">{pending}</span>}
-                {n.soon && <span className="rounded border border-line-strong px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-mute">soon</span>}
-                {active && <span className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-accent" />}
+                {n.id === "approvals" && pending > 0 && <span className="num grid min-w-5 place-items-center rounded-full bg-escalate px-1.5 text-[11px] font-semibold leading-5 text-white">{pending}</span>}
+                {n.soon && <span className="rounded-full border border-line-strong px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-mute">soon</span>}
               </button>
             );
           })}
         </nav>
 
         <ConnectionPill />
-        <button onClick={onHow} className="focus-ring hidden items-center gap-1.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-dim transition hover:bg-hover hover:text-fg lg:inline-flex">
-          <IconInfo size={15} /> How this works
-        </button>
-        <button onClick={onLogout} className="focus-ring grid size-9 place-items-center rounded-lg text-dim transition hover:bg-hover hover:text-fg" aria-label="Sign out" title="Sign out">
+        <RoundButton label="How this works" onClick={onHow} className="hidden lg:grid">
+          <IconInfo size={16} />
+        </RoundButton>
+        <RoundButton label="Sign out" onClick={onLogout}>
           <IconSignOut size={16} />
-        </button>
+        </RoundButton>
 
         <button
           onClick={() => (frozen ? undefined : setConfirm(true))}
           disabled={frozen}
-          className={`focus-ring inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-[13px] font-extrabold tracking-wider transition ${frozen ? "cursor-default border border-deny/50 bg-deny/10 text-deny" : "bg-deny text-base shadow-[0_0_0_1px_rgb(255_93_108/0.6),0_8px_28px_-6px_rgb(255_93_108/0.75)] hover:brightness-110 active:translate-y-px"}`}
+          className={`focus-ring inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-[13px] font-semibold tracking-wider transition duration-[var(--duration-base)] ease-soft ${frozen ? "cursor-default bg-deny-solid text-white shadow-red" : "bg-ink text-on-ink shadow-pill hover:bg-deny-solid hover:shadow-red active:scale-[0.98]"}`}
           title={frozen ? "Agents are frozen" : "Freeze every agent immediately"}
         >
-          <IconSnow size={15} strokeWidth={2.4} />
+          <IconSnow size={15} strokeWidth={2.2} />
           <span className="hidden sm:inline">{frozen ? "FROZEN" : "KILL SWITCH"}</span>
         </button>
       </div>
 
       <Modal open={confirm} onClose={() => setConfirm(false)} title="Freeze all agents" tone="danger">
         <div className="flex items-start gap-4">
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl border border-deny/50 bg-deny/12 text-deny">
+          <div className="grid size-12 shrink-0 place-items-center rounded-full bg-deny-soft text-deny">
             <IconSnow size={22} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Freeze every agent now?</h2>
+            <h2 className="text-2xl">Freeze every agent now?</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-dim">
               From this moment every tool call from every agent is denied at the first stage, before any rule runs. Nothing is approved, paid or refunded until you unfreeze.
             </p>

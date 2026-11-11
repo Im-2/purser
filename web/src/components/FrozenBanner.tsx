@@ -23,12 +23,12 @@ export function FrozenBanner() {
       : "An operator froze it.";
 
   return (
-    <div role="alert" className="border-b border-deny/50 bg-[linear-gradient(90deg,rgb(255_93_108/0.22),rgb(255_93_108/0.1))]">
-      <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-        <span className="grid size-8 place-items-center rounded-lg bg-deny text-base"><IconSnow size={17} strokeWidth={2.4} /></span>
+    <div role="alert" className="rise mx-auto max-w-[1800px] px-4 pt-3 sm:px-6">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border border-deny-line bg-deny-soft px-5 py-3 shadow-soft">
+        <span className="grid size-9 place-items-center rounded-full bg-deny-solid text-white shadow-red"><IconSnow size={17} strokeWidth={2.4} /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-deny">{title}</div>
-          <div className="text-[13px] text-fg/80">{why} Every tool call is denied until you unfreeze.</div>
+          <div className="text-[15px] font-medium text-deny">{title}</div>
+          <div className="text-[13px] text-dim">{why} Every tool call is denied until you unfreeze.</div>
         </div>
         <Button
           tone="deny"

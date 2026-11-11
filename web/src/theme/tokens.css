@@ -1,0 +1,111 @@
+/* ------------------------------------------------------------------------------------------------------------------
+   PURSER DESIGN TOKENS. The single place to restyle the dashboard: colours, fonts, radii, shadows and motion.
+   Look: soft clay and paper. Light grey backdrop, near-white rounded panels, pale-lime tint for active / selected / hover,
+   near-black pills. The three decision colours (allow / escalate / deny) are never used for anything else, and lime is
+   never used for a decision.
+   ------------------------------------------------------------------------------------------------------------------ */
+@theme {
+  /* ---- type ---- */
+  --font-sans: "Inter Tight Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --tracking-display: -0.035em;
+  --tracking-tight: -0.015em;
+
+  /* ---- surfaces ---- */
+  --color-base: #e2e2e2; /* page backdrop */
+  --color-panel: #fdfdfd; /* large rounded panels */
+  --color-raised: #f6f6f4; /* a surface sitting on a panel */
+  --color-sunken: #f0f0ee; /* inputs, tracks, insets */
+  --color-line: #ebebe8; /* hairlines */
+  --color-line-strong: #d9d9d5;
+
+  /* ---- lime: ONLY for active, selected and hover states ---- */
+  --color-lime: #f3f6c4;
+  --color-lime-soft: #fafddf;
+  --color-lime-line: #dfe69a;
+  --color-hover: #f6f9d6;
+  --color-arc: #e9edb8; /* the thin arc lines on the backdrop */
+
+  /* ---- ink ---- */
+  --color-ink: #131316; /* primary pills, the one dark card */
+  --color-ink-soft: #26262b;
+  --color-on-ink: #fdfdfd;
+  --color-fg: #131316;
+  --color-dim: #5b5b63;
+  --color-mute: #8d8d95;
+
+  /* ---- the three decisions: deep text on a soft chip ---- */
+  --color-allow: #0b7a47;
+  --color-allow-soft: #dcf5e7;
+  --color-allow-line: #a9e3c3;
+  --color-escalate: #96560a;
+  --color-escalate-soft: #ffefc9;
+  --color-escalate-line: #f2cf86;
+  --color-deny: #c0243a;
+  --color-deny-soft: #fde2e6;
+  --color-deny-line: #f4b3bd;
+  --color-deny-solid: #e03a52; /* the kill switch when frozen, solid fills */
+
+  /* ---- the one accent is ink; accent-hi is a readable olive for links and highlights on white ---- */
+  --color-accent: #131316;
+  --color-accent-hi: #5d6513;
+
+  /* ---- radii ---- */
+  --radius-panel: 28px;
+  --radius-card: 22px;
+  --radius-inner: 16px;
+  --radius-chip: 999px;
+
+  /* ---- shadows (very soft) ---- */
+  --shadow-soft: 0 1px 2px rgb(19 19 22 / 0.04), 0 14px 40px -16px rgb(19 19 22 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(19 19 22 / 0.05), 0 22px 54px -18px rgb(19 19 22 / 0.22);
+  --shadow-pill: 0 1px 2px rgb(19 19 22 / 0.18), 0 8px 20px -8px rgb(19 19 22 / 0.5);
+  --shadow-drawer: -24px 0 70px -30px rgb(19 19 22 / 0.35);
+  --shadow-red: 0 1px 2px rgb(192 36 58 / 0.3), 0 10px 26px -8px rgb(224 58 82 / 0.65);
+
+  /* ---- motion: soft and smooth, transforms and opacity only ---- */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-base: 420ms;
+  --duration-slow: 820ms;
+  --stagger: 70ms;
+
+  --animate-rise: rise var(--duration-base) var(--ease-soft) both;
+  --animate-reveal: reveal calc(var(--duration-slow) + 120ms) var(--ease-soft) both;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-float-slow: float 11s ease-in-out infinite;
+  --animate-row-in: row-in 2.4s var(--ease-soft) 1;
+  --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-coin: coin 14s ease-in-out infinite;
+
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(14px) scale(0.985); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes reveal {
+    0% { transform: translateY(108%); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes coin {
+    0%, 100% { transform: translateY(0) rotate3d(0.3, 1, 0, -14deg); }
+    50% { transform: translateY(-10px) rotate3d(0.3, 1, 0, 14deg); }
+  }
+  @keyframes row-in {
+    0% { background-color: var(--color-lime); box-shadow: inset 3px 0 0 var(--color-lime-line); }
+    100% { background-color: transparent; box-shadow: inset 3px 0 0 transparent; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 7px transparent; opacity: 0.85; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -240px 0; }
+    100% { background-position: 240px 0; }
+  }
+}

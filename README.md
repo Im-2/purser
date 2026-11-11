@@ -181,3 +181,7 @@ pnpm --filter @purser/web verify:ui  # drives Edge against the running backend a
 ```
 
 Sign in with `PURSER_ADMIN_TOKEN` from `.env` (kept in sessionStorage only). `verify:ui` moves real sandbox money (scenario D pays $120, the approved escalation pays $160) and denies the look-alike payout.
+
+### Restyling the dashboard
+
+Every colour, font, radius, shadow and motion timing lives in `web/src/theme/tokens.css`. The AG Grid theme reads the same CSS variables, so editing that one file restyles the whole UI. Lime is reserved for active, selected and hover states; allow / escalate / deny colours are used only for decisions.

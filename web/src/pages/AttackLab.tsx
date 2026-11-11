@@ -34,11 +34,11 @@ function LogLine({ e }: { e: ScenarioLog }) {
   const icon =
     e.kind === "agent" ? <IconRobot size={14} /> : e.kind === "tool_call" ? <IconBolt size={14} /> : e.kind === "error" ? <IconX size={14} strokeWidth={2.4} /> : e.kind === "done" ? <IconCheck size={14} strokeWidth={2.4} /> : e.kind === "decision" ? <IconShield size={14} /> : <span className="size-1.5 rounded-full bg-current opacity-70" />;
   return (
-    <li className={`animate-rise grid grid-cols-[20px_1fr] gap-2.5 py-1.5 ${logTone(e)}`}>
+    <li className={`rise grid grid-cols-[20px_1fr] gap-2.5 py-1.5 ${logTone(e)}`}>
       <span className="mt-[3px] grid place-items-center">{icon}</span>
       <div className="min-w-0">
-        {e.kind === "agent" && <div className="mb-0.5 text-[10.5px] font-bold uppercase tracking-wider text-escalate">agent says</div>}
-        <span className={`${e.kind === "tool_call" || e.kind === "tool_result" || e.kind === "decision" ? "num text-[12.5px]" : "text-[13.5px]"} break-words leading-relaxed ${e.kind === "done" || e.kind === "start" ? "font-semibold" : ""}`}>{e.message}</span>
+        {e.kind === "agent" && <div className="mb-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-escalate">agent says</div>}
+        <span className={`${e.kind === "tool_call" || e.kind === "tool_result" || e.kind === "decision" ? "num text-[12.5px]" : "text-[13.5px]"} break-words leading-relaxed ${e.kind === "done" || e.kind === "start" ? "font-medium" : ""}`}>{e.message}</span>
       </div>
     </li>
   );
@@ -48,11 +48,11 @@ function DecisionCard({ a }: { a: Attempt }) {
   const drawer = useDrawer();
   const sigs = [...a.signals].sort((x, y) => Number(x === "first_time_payee") - Number(y === "first_time_payee"));
   return (
-    <li className="animate-rise">
-      <button onClick={() => drawer.open(a.id)} className="focus-ring w-full rounded-xl border border-line bg-raised/50 p-3.5 text-left transition hover:border-line-strong hover:bg-raised">
+    <li className="rise">
+      <button onClick={() => drawer.open(a.id)} className="focus-ring w-full rounded-[22px] border border-line bg-raised/50 p-3.5 text-left transition hover:border-line-strong hover:bg-raised">
         <div className="flex flex-wrap items-center gap-2.5">
           <DecisionChip decision={a.decision} />
-          <span className="num text-[15px] font-semibold">{a.amount === null ? "n/a" : money(a.amount, a.currency)}</span>
+          <span className="num text-[15px] font-medium">{a.amount === null ? "n/a" : money(a.amount, a.currency)}</span>
           <span className="num text-xs text-mute">{a.tool}</span>
           <StageChip stage={a.decision_stage} />
         </div>
@@ -63,7 +63,7 @@ function DecisionCard({ a }: { a: Attempt }) {
               <SignalChip key={s} id={s} />
             ))}
             {a.rule_hits.slice(0, 3).map((r) => (
-              <span key={r} className="rounded-md border border-line-strong bg-sunken px-2 py-0.5 text-[11px] text-dim">
+              <span key={r} className="rounded-full border border-line-strong bg-sunken px-2 py-0.5 text-[11px] text-dim">
                 {r.replace(/_/g, " ")}
               </span>
             ))}
@@ -128,7 +128,7 @@ export function AttackLabPage() {
   return (
     <main className="mx-auto max-w-[1800px] px-4 py-5 sm:px-6">
       <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Attack Lab</h1>
+        <h1 className="text-xl font-medium tracking-tight">Attack Lab</h1>
         <p className="text-sm text-dim">Run a scenario and watch both sides at once: what the agent does, and what Purser decides.</p>
       </div>
 
@@ -141,12 +141,11 @@ export function AttackLabPage() {
               role="radio"
               aria-checked={on}
               onClick={() => setSelected(s.id)}
-              className={`focus-ring panel relative flex items-start gap-3.5 overflow-hidden px-4 py-3.5 text-left transition ${on ? "border-accent/70 bg-raised shadow-[0_0_0_1px_rgb(124_108_255/0.5),0_18px_44px_-22px_rgb(124_108_255/0.6)]" : "hover:border-line-strong hover:bg-raised/60"}`}
+              className={`focus-ring panel relative flex items-start gap-3.5 overflow-hidden px-4 py-3.5 text-left transition ${on ? "border-lime-line bg-lime-soft shadow-lift" : "hover:border-lime-line hover:bg-hover"}`}
             >
-              <span className={`absolute inset-y-0 left-0 w-1 ${on ? "bg-accent" : TONE_BAR[s.tone] + "/60"}`} />
-              <span className={`num grid size-9 shrink-0 place-items-center rounded-lg border text-sm font-bold ${on ? "border-accent/60 bg-accent/20 text-accent-hi" : "border-line-strong bg-sunken text-dim"}`}>{s.id}</span>
+              <span className={`num grid size-9 shrink-0 place-items-center rounded-2xl border text-sm font-semibold ${on ? "border-ink bg-ink text-on-ink" : "border-line-strong bg-sunken text-dim"}`}>{s.id}</span>
               <span className="min-w-0">
-                <span className="flex items-center gap-2 text-[15px] font-semibold">
+                <span className="flex items-center gap-2 text-[15px] font-medium">
                   {s.title}
                   <span className={`size-1.5 rounded-full ${TONE_BAR[s.tone]}`} />
                 </span>
@@ -183,7 +182,7 @@ export function AttackLabPage() {
           />
         </div>
         <label className="flex cursor-pointer items-center gap-2.5 pt-5 text-[13px] text-dim">
-          <input type="checkbox" checked={resetFirst} onChange={(e) => setResetFirst(e.target.checked)} className="size-4 accent-[#7c6cff]" />
+          <input type="checkbox" checked={resetFirst} onChange={(e) => setResetFirst(e.target.checked)} className="size-4 accent-[var(--color-ink)]" />
           Reset state first
         </label>
         <div className="ml-auto flex items-center gap-3 pt-4">
@@ -196,7 +195,7 @@ export function AttackLabPage() {
         </div>
       </section>
       {finished && pendingFromRun && (
-        <div role="status" className="animate-rise mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-escalate/45 bg-escalate/10 px-5 py-2.5">
+        <div role="status" className="rise mt-3 flex flex-wrap items-center gap-3 rounded-[22px] border border-escalate-line bg-escalate-soft px-5 py-2.5">
           <IconAlert size={18} className="text-escalate" />
           <p className="flex-1 text-sm text-fg">The agent's payout is waiting for a human. Decide it from the Approvals page.</p>
           <Button tone="escalate" size="sm" onClick={() => navigate("approvals")}>
@@ -206,15 +205,15 @@ export function AttackLabPage() {
       )}
 
       <div className="mt-3 grid gap-4 lg:grid-cols-2">
-        <section className="panel flex h-[clamp(340px,calc(100vh-430px),900px)] flex-col" aria-label="What the agent is doing">
+        <section className="panel flex h-[clamp(340px,calc(100vh-470px),900px)] flex-col" aria-label="What the agent is doing">
           <header className="flex items-center gap-3 border-b border-line px-5 py-3.5">
-            <span className="grid size-8 place-items-center rounded-lg border border-line-strong bg-sunken text-escalate"><IconRobot size={16} /></span>
+            <span className="grid size-8 place-items-center rounded-2xl border border-line-strong bg-sunken text-escalate"><IconRobot size={16} /></span>
             <div>
-              <h2 className="text-[14.5px] font-semibold leading-tight">What the agent is doing</h2>
+              <h2 className="text-[14.5px] font-medium leading-tight">What the agent is doing</h2>
               <p className="text-xs text-mute">its tool calls, as they happen</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {runScenario && <span className="num rounded-md border border-line-strong px-2 py-0.5 text-[11px] text-dim">scenario {runScenario}</span>}
+              {runScenario && <span className="num rounded-full border border-line-strong px-2 py-0.5 text-[11px] text-dim">scenario {runScenario}</span>}
               {logs.length > 0 && <ModeChip mode={runMode} />}
             </div>
           </header>
@@ -234,14 +233,14 @@ export function AttackLabPage() {
           </div>
         </section>
 
-        <section className="panel flex h-[clamp(340px,calc(100vh-430px),900px)] flex-col" aria-label="What Purser decided">
+        <section className="panel flex h-[clamp(340px,calc(100vh-470px),900px)] flex-col" aria-label="What Purser decided">
           <header className="flex items-center gap-3 border-b border-line px-5 py-3.5">
-            <span className="grid size-8 place-items-center rounded-lg border border-accent/40 bg-accent/12 text-accent-hi"><IconShield size={16} /></span>
+            <span className="grid size-8 place-items-center rounded-2xl border border-lime-line bg-lime text-accent-hi"><IconShield size={16} /></span>
             <div>
-              <h2 className="text-[14.5px] font-semibold leading-tight">What Purser decided</h2>
+              <h2 className="text-[14.5px] font-medium leading-tight">What Purser decided</h2>
               <p className="text-xs text-mute">every attempt, with the reason</p>
             </div>
-            <span className="num ml-auto rounded-md border border-line-strong px-2 py-0.5 text-[11px] text-dim">{decisions.length} {decisions.length === 1 ? "attempt" : "attempts"}</span>
+            <span className="num ml-auto rounded-full border border-line-strong px-2 py-0.5 text-[11px] text-dim">{decisions.length} {decisions.length === 1 ? "attempt" : "attempts"}</span>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
             {decisions.length === 0 ? (

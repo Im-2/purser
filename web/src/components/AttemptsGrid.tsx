@@ -1,5 +1,5 @@
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry, colorSchemeDark, themeQuartz, type ColDef, type GridApi, type GridReadyEvent, type ICellRendererParams } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type GridApi, type GridReadyEvent, type ICellRendererParams } from "ag-grid-community";
 import { useEffect, useMemo, useRef } from "react";
 import { STAGE_LABEL, clock, label, money } from "../lib/format";
 import type { Attempt, Decision } from "../lib/types";
@@ -10,28 +10,30 @@ import { Button } from "./ui";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-/** AG Grid's current Theming API: Quartz, dark colour scheme, tuned to the Purser palette. */
-export const purserTheme = themeQuartz.withPart(colorSchemeDark).withParams({
-  backgroundColor: "#0c1219",
-  foregroundColor: "#e9eff6",
-  borderColor: "#1b2633",
-  headerBackgroundColor: "#0a0f16",
-  headerTextColor: "#6a7a8f",
-  headerFontWeight: 600,
-  oddRowBackgroundColor: "#0b1118",
-  rowHoverColor: "#151f2c",
-  selectedRowBackgroundColor: "#1b2740",
-  accentColor: "#7c6cff",
-  fontFamily: "Inter Variable, ui-sans-serif, system-ui, sans-serif",
-  fontSize: 13.5,
+/** AG Grid Theming API: Quartz (light), white rows, hairline borders, colours read from the token file via CSS variables. */
+export const purserTheme = themeQuartz.withParams({
+  backgroundColor: "var(--color-panel)",
+  foregroundColor: "var(--color-fg)",
+  borderColor: "var(--color-line)",
+  headerBackgroundColor: "var(--color-panel)",
+  headerTextColor: "var(--color-mute)",
+  headerFontWeight: 500,
+  oddRowBackgroundColor: "var(--color-panel)",
+  rowHoverColor: "var(--color-hover)",
+  selectedRowBackgroundColor: "var(--color-lime)",
+  accentColor: "var(--color-ink)",
+  fontFamily: "Inter Tight Variable, ui-sans-serif, system-ui, sans-serif",
+  fontSize: 14,
   headerFontSize: 11,
-  rowBorder: { color: "#16202c" },
+  rowBorder: { color: "var(--color-line)", width: 1 },
+  headerRowBorder: { color: "var(--color-line)", width: 1 },
   columnBorder: false,
   wrapperBorder: false,
   wrapperBorderRadius: 0,
   spacing: 7,
-  inputBackgroundColor: "#070a0f",
-  menuBackgroundColor: "#121b26",
+  inputBackgroundColor: "var(--color-sunken)",
+  menuBackgroundColor: "var(--color-panel)",
+  borderRadius: 12,
 });
 
 const mono = "font-mono";
@@ -70,10 +72,10 @@ function AiCell(p: ICellRendererParams<Attempt>) {
 function NoRows() {
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center px-6 text-center">
-      <div className="mb-4 grid size-14 place-items-center rounded-2xl border border-line-strong bg-raised text-accent-hi">
+      <div className="mb-4 grid size-14 place-items-center rounded-full bg-lime text-accent-hi float">
         <IconShield size={24} />
       </div>
-      <h3 className="text-base font-semibold text-fg">The ledger is quiet</h3>
+      <h3 className="text-xl text-fg">The ledger is quiet</h3>
       <p className="mt-1.5 text-sm leading-relaxed text-dim">Every tool call an agent makes appears here the moment it happens, with the reason Purser decided the way it did.</p>
       <Button tone="primary" size="sm" className="mt-5" onClick={() => navigate("lab")}>
         Run a scenario in the Attack Lab
@@ -98,15 +100,15 @@ export function AttemptsGrid({ rows, fresh, decision, quick, onOpen }: Props) {
 
   const cols = useMemo<ColDef<Attempt>[]>(
     () => [
-      { headerName: "Time", field: "ts", width: 112, sort: "desc", sortIndex: 0, filter: false, valueFormatter: (p) => (p.value ? clock(p.value as string) : ""), cellClass: `${mono} text-dim`, comparator: (a: string, b: string) => Date.parse(a) - Date.parse(b) },
-      { headerName: "Decision", field: "decision", width: 140, cellRenderer: DecisionCell, filter: "agTextColumnFilter" },
-      { headerName: "Tool", field: "tool", width: 170, cellClass: `${mono} text-fg`, filter: "agTextColumnFilter" },
+      { headerName: "Time", field: "ts", width: 104, sort: "desc", sortIndex: 0, filter: false, valueFormatter: (p) => (p.value ? clock(p.value as string) : ""), cellClass: `${mono} text-dim`, comparator: (a: string, b: string) => Date.parse(a) - Date.parse(b) },
+      { headerName: "Decision", field: "decision", width: 130, cellRenderer: DecisionCell, filter: "agTextColumnFilter" },
+      { headerName: "Tool", field: "tool", width: 150, cellClass: `${mono} text-fg`, filter: "agTextColumnFilter" },
       { headerName: "Amount", width: 130, type: "rightAligned", valueGetter: (p) => p.data?.amount ?? null, valueFormatter: (p) => (p.value === null || p.value === undefined ? "n/a" : money(p.value as number, p.data?.currency)), cellClass: `${mono} font-semibold`, filter: "agNumberColumnFilter", filterValueGetter: (p) => (p.data?.amount ?? 0) / 100 },
-      { headerName: "Payee", field: "payee_email", flex: 1.1, minWidth: 220, valueFormatter: (p) => (p.value as string | null) ?? "n/a", cellClass: `${mono} text-dim`, filter: "agTextColumnFilter" },
-      { headerName: "Decided by", field: "decision_stage", width: 160, cellRenderer: StageCell, filter: "agTextColumnFilter", filterValueGetter: (p) => label(STAGE_LABEL, p.data?.decision_stage ?? "") },
-      { headerName: "Signals", flex: 1.3, minWidth: 260, cellRenderer: SignalsCell, sortable: false, filter: "agTextColumnFilter", filterValueGetter: (p) => (p.data?.signals ?? []).join(" ") },
-      { headerName: "AI risk", width: 150, cellRenderer: AiCell, valueGetter: (p) => p.data?.ai?.risk ?? -1, filter: "agNumberColumnFilter" },
-      { headerName: "ms", field: "latency_ms", width: 86, type: "rightAligned", cellClass: `${mono} text-mute`, filter: "agNumberColumnFilter", valueFormatter: (p) => (p.value === null || p.value === undefined ? "" : String(p.value)) },
+      { headerName: "Payee", field: "payee_email", flex: 1.1, minWidth: 200, valueFormatter: (p) => (p.value as string | null) ?? "n/a", cellClass: `${mono} text-dim`, filter: "agTextColumnFilter" },
+      { headerName: "Decided by", field: "decision_stage", width: 150, cellRenderer: StageCell, filter: "agTextColumnFilter", filterValueGetter: (p) => label(STAGE_LABEL, p.data?.decision_stage ?? "") },
+      { headerName: "Signals", flex: 1.3, minWidth: 220, cellRenderer: SignalsCell, sortable: false, filter: "agTextColumnFilter", filterValueGetter: (p) => (p.data?.signals ?? []).join(" ") },
+      { headerName: "AI risk", width: 130, cellRenderer: AiCell, valueGetter: (p) => p.data?.ai?.risk ?? -1, filter: "agNumberColumnFilter" },
+      { headerName: "ms", field: "latency_ms", width: 70, type: "rightAligned", cellClass: `${mono} text-mute`, filter: "agNumberColumnFilter", valueFormatter: (p) => (p.value === null || p.value === undefined ? "" : String(p.value)) },
     ],
     [],
   );

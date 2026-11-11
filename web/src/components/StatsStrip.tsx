@@ -3,38 +3,60 @@ import { navigate } from "../lib/route";
 import { useStore } from "../lib/store";
 import { Skeleton } from "./ui";
 
-type Tone = "allow" | "deny" | "escalate" | "neutral";
-const RING: Record<Tone, string> = { allow: "before:bg-allow", deny: "before:bg-deny", escalate: "before:bg-escalate", neutral: "before:bg-accent" };
-const TEXT: Record<Tone, string> = { allow: "text-allow", deny: "text-deny", escalate: "text-escalate", neutral: "text-fg" };
+type Tone = "allow" | "deny" | "escalate" | "neutral" | "ink";
+const TEXT: Record<Tone, string> = { allow: "text-allow", deny: "text-deny", escalate: "text-escalate", neutral: "text-fg", ink: "text-on-ink" };
+const DOT: Record<Tone, string> = { allow: "bg-allow", deny: "bg-deny", escalate: "bg-escalate", neutral: "bg-mute", ink: "bg-lime" };
 
-/** Brief brightness pulse whenever the value changes, so live updates are noticeable without being noisy. */
-function useTick(value: string): boolean {
-  const prev = useRef(value);
-  const [tick, setTick] = useState(false);
+/** Smoothly counts from the previous value to the new one (text only, no layout work, so it stays at 60fps). */
+function useCountUp(target: number, ms = 900): number {
+  const [v, setV] = useState(0);
+  const from = useRef(0);
   useEffect(() => {
-    if (prev.current !== value) {
-      prev.current = value;
-      setTick(true);
-      const t = setTimeout(() => setTick(false), 700);
-      return () => clearTimeout(t);
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      from.current = target;
+      setV(target);
+      return;
     }
-  }, [value]);
-  return tick;
+    const start = performance.now();
+    const a = from.current;
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      const cur = a + (target - a) * e;
+      from.current = cur;
+      setV(cur);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
 }
 
-function Stat({ label, value, sub, tone, onClick }: { label: string; value: string; sub: string; tone: Tone; onClick?: () => void }) {
-  const tick = useTick(value);
+function Count({ value, money, decimals = 0 }: { value: number; money?: boolean; decimals?: number }) {
+  const v = useCountUp(value);
+  const txt = v.toFixed(decimals).replace(/B(?=(d{3})+(?!d))/g, ",");
+  return <>{money ? "$" : ""}{txt}</>;
+}
+
+function Stat({ label, value, money, sub, tone, index, onClick }: { label: string; value: number; money?: boolean; sub: string; tone: Tone; index: number; onClick?: () => void }) {
   const Tag = onClick ? "button" : "div";
+  const ink = tone === "ink";
   return (
     <Tag
       onClick={onClick}
-      className={`panel relative overflow-hidden px-5 py-4 text-left before:absolute before:inset-y-4 before:left-0 before:w-[3px] before:rounded-r-full ${RING[tone]} ${onClick ? "focus-ring transition hover:border-line-strong hover:bg-raised" : ""}`}
+      style={{ "--i": index } as React.CSSProperties}
+      className={`rise relative px-6 py-5 text-left ${ink ? "panel-ink" : "panel"} ${onClick ? `focus-ring transition duration-[var(--duration-base)] ease-soft hover:-translate-y-0.5 ${ink ? "" : "hover:bg-hover"}` : ""}`}
     >
-      <div className="eyebrow">{label}</div>
-      <div className={`num mt-2 text-[2rem] font-semibold leading-none transition-all duration-500 ${TEXT[tone]} ${tick ? "scale-[1.04] brightness-125" : ""}`} style={{ transformOrigin: "left center" }}>
-        {value}
+      <div className={`flex items-center gap-2 text-[12px] font-medium ${ink ? "text-on-ink/70" : "text-mute"}`}>
+        <span className={`size-2 rounded-full ${DOT[tone]}`} />
+        {label}
       </div>
-      <div className="mt-2 text-xs text-mute">{sub}</div>
+      <div className={`num mt-3 text-[2.4rem] font-normal leading-none tracking-[-0.04em] ${TEXT[tone]}`}>
+        <Count value={value} money={money} decimals={money ? 2 : 0} />
+      </div>
+      <div className={`mt-2.5 text-xs ${ink ? "text-on-ink/60" : "text-mute"}`}>{sub}</div>
     </Tag>
   );
 }
@@ -46,7 +68,7 @@ export function StatsStrip() {
     return (
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="panel px-5 py-4">
+          <div key={i} className="panel px-6 py-5">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="mt-3 h-8 w-32" />
             <Skeleton className="mt-3 h-3 w-40" />
@@ -57,10 +79,10 @@ export function StatsStrip() {
   }
   return (
     <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-      <Stat label="Spent today" value={`$${s.spend_today.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`} sub="allowed payouts and refunds executed" tone="allow" />
-      <Stat label="Blocked today" value={String(s.blocked_count)} sub="calls denied before any money moved" tone="deny" />
-      <Stat label="Blocked amount" value={`$${s.blocked_amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`} sub="what those calls would have moved" tone="deny" />
-      <Stat label="Pending approvals" value={String(s.pending_approvals)} sub={s.pending_approvals ? "waiting for a human, tap to review" : "nothing waiting on you"} tone={s.pending_approvals ? "escalate" : "neutral"} onClick={() => navigate("approvals")} />
+      <Stat index={0} label="Spent today" value={Number(s.spend_today)} money sub="allowed payouts and refunds executed" tone="ink" />
+      <Stat index={1} label="Blocked today" value={s.blocked_count} sub="calls denied before any money moved" tone="deny" />
+      <Stat index={2} label="Blocked amount" value={Number(s.blocked_amount)} money sub="what those calls would have moved" tone="deny" />
+      <Stat index={3} label="Pending approvals" value={s.pending_approvals} sub={s.pending_approvals ? "waiting for a human, tap to review" : "nothing waiting on you"} tone={s.pending_approvals ? "escalate" : "neutral"} onClick={() => navigate("approvals")} />
     </div>
   );
 }

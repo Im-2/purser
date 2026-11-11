@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { DrawerProvider } from "./components/AttemptDrawer";
 import { FrozenBanner } from "./components/FrozenBanner";
-import { Header } from "./components/Header";
+import { Header, Rail } from "./components/Header";
+import { Backdrop } from "./components/Backdrop";
 import { HowItWorks } from "./components/HowItWorks";
 import { UNAUTHORIZED_EVENT, clearToken, getToken } from "./lib/api";
 import { useRoute } from "./lib/route";
@@ -17,7 +18,7 @@ function LoadError() {
   const { state, refreshAll } = useStore();
   if (!state.loadError) return null;
   return (
-    <div role="alert" className="border-b border-escalate/40 bg-escalate/10 px-6 py-2.5 text-center text-[13px] text-escalate">
+    <div role="alert" className="mx-4 mt-3 rounded-full border border-escalate-line bg-escalate-soft px-6 py-2.5 text-center text-[13px] text-escalate">
       Could not load data: {state.loadError}{" "}
       <button onClick={() => void refreshAll()} className="ml-2 font-semibold underline underline-offset-2">
         Retry
@@ -31,6 +32,9 @@ function Shell({ onLogout }: { onLogout: () => void }) {
   const [how, setHow] = useState(false);
   return (
     <DrawerProvider>
+      <Backdrop />
+      <Rail route={route} />
+      <div className="min-[1280px]:pl-[88px]">
       <Header route={route} onHow={() => setHow(true)} onLogout={onLogout} />
       <FrozenBanner />
       <LoadError />
@@ -39,6 +43,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
       {route === "lab" && <AttackLabPage />}
       {route === "policies" && <ComingNextPage which="policies" />}
       {route === "reconciliation" && <ComingNextPage which="reconciliation" />}
+      </div>
       <HowItWorks open={how} onClose={() => setHow(false)} />
     </DrawerProvider>
   );

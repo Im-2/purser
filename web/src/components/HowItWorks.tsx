@@ -19,12 +19,12 @@ export function HowItWorks({ open, onClose }: { open: boolean; onClose: () => vo
       </div>
       <ol className="grid gap-2.5">
         {STEPS.map((s) => (
-          <li key={s.n} className="grid grid-cols-[44px_1fr] gap-4 rounded-xl border border-line bg-raised/60 p-4">
-            <div className="grid size-11 place-items-center rounded-xl border border-accent/40 bg-accent/12 text-accent-hi">{s.icon}</div>
+          <li key={s.n} className="grid grid-cols-[44px_1fr] gap-4 rounded-[22px] border border-line bg-raised/60 p-4">
+            <div className="grid size-11 place-items-center rounded-[22px] border border-lime-line bg-lime text-accent-hi">{s.icon}</div>
             <div>
               <div className="flex items-baseline gap-2.5">
-                <span className="num text-xs font-semibold text-accent-hi">0{s.n}</span>
-                <h3 className="text-[15px] font-semibold">{s.title}</h3>
+                <span className="num text-xs font-medium text-accent-hi">0{s.n}</span>
+                <h3 className="text-[15px] font-medium">{s.title}</h3>
               </div>
               <p className="mt-1 text-[13.5px] leading-relaxed text-dim">{s.body}</p>
             </div>
