@@ -68,7 +68,7 @@ const statValue = (label) => page.getByText(label, { exact: true }).locator("xpa
 
 try {
   // ---------- sign in ----------
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/app`, { waitUntil: "networkidle" });
   await page.getByLabel("Admin token").fill(token);
   await page.getByRole("button", { name: "Connect" }).click();
   await page.getByText("Live decisions").waitFor({ timeout: 15000 });

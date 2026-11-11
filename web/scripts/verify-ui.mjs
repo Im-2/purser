@@ -56,7 +56,7 @@ const toast = (re) => page.getByText(re).first();
 
 try {
   // ---------- login ----------
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/app`, { waitUntil: "networkidle" });
   await page.getByLabel("Admin token").waitFor();
   await shot("01-login");
   ok("login screen shows", true);

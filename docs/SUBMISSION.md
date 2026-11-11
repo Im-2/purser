@@ -45,7 +45,7 @@ An Attack Lab runs four scenarios from the dashboard: a poisoned invoice, struct
 ## Accomplishments
 
 - The same decision pipeline runs for the scripted agent, a live LLM agent and the dashboard's Attack Lab, and writes to one audit table.
-- 537 automated tests, including the rules engine, the pipeline with a mocked PayPal, webhook signature handling and reconciliation, plus a replay check (`pnpm demo:verify`) that runs all four scenarios with model calls disabled.
+- 539 automated tests, including the rules engine, the pipeline with a mocked PayPal, webhook signature handling and reconciliation, plus a replay check (`pnpm demo:verify`) that runs all four scenarios with model calls disabled.
 - Real sandbox money moves end to end: an approved escalation executes exactly once, and an out-of-band payout is caught by reconciliation.
 - Every decision is explainable on screen: the stage that decided, the rules hit, the signals with their evidence, the AI rationale and the upstream result.
 

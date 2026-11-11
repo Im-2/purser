@@ -1,4 +1,5 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { brotliCompressSync, gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -15,6 +16,9 @@ beforeAll(async () => {
   mkdirSync(path.join(dir, "assets"));
   writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>Purser</title><div id=root></div>");
   writeFileSync(path.join(dir, "assets", "index-abc123.js"), "console.log('app')");
+  const js = "console.log('app')";
+  writeFileSync(path.join(dir, "assets", "index-abc123.js.br"), brotliCompressSync(js));
+  writeFileSync(path.join(dir, "assets", "index-abc123.js.gz"), gzipSync(js));
   writeFileSync(path.join(dir, "favicon.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
   app = buildApp(loadConfig({ LOG_LEVEL: "silent" }), { webDist: dir });
   await app.ready();
@@ -37,10 +41,27 @@ describe("serving the built dashboard", () => {
     expect(a.headers["cache-control"]).toMatch(/immutable/);
     expect((await app.inject({ method: "GET", url: "/favicon.svg" })).statusCode).toBe(200);
   });
+  it("serves pre-compressed assets (brotli, then gzip) when the browser accepts them", async () => {
+    const br = await app.inject({ method: "GET", url: "/assets/index-abc123.js", headers: { "accept-encoding": "br, gzip" } });
+    expect(br.headers["content-encoding"]).toBe("br");
+    expect(br.headers["vary"]).toMatch(/accept-encoding/i);
+    const gz = await app.inject({ method: "GET", url: "/assets/index-abc123.js", headers: { "accept-encoding": "gzip" } });
+    expect(gz.headers["content-encoding"]).toBe("gzip");
+    const none = await app.inject({ method: "GET", url: "/assets/index-abc123.js" });
+    expect(none.headers["content-encoding"]).toBeUndefined();
+    expect(none.body).toContain("console.log");
+  });
   it("falls back to index.html for unknown browser paths (SPA)", async () => {
     const r = await app.inject({ method: "GET", url: "/some/deep/link", headers: html });
     expect(r.statusCode).toBe(200);
     expect(r.body).toContain('<div id=root>');
+  });
+  it("serves the SPA for the landing page (/) and the dashboard (/app, /app/...)", async () => {
+    for (const url of ["/", "/app", "/app/", "/app/anything"]) {
+      const r = await app.inject({ method: "GET", url, headers: html });
+      expect(r.statusCode, url).toBe(200);
+      expect(r.body, url).toContain("<div id=root>");
+    }
   });
   it("never shadows the backend: /health stays JSON, unknown /api and /mcp paths stay 404 JSON", async () => {
     expect((await app.inject({ method: "GET", url: "/health" })).json().status).toBe("ok");

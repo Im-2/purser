@@ -1,0 +1,11 @@
+{
+  "generated_by": "pnpm landing:facts",
+  "tests": 539,
+  "tests_server": 512,
+  "tests_agent": 27,
+  "mcp_tools": 25,
+  "hard_rules": 15,
+  "pipeline_stages": 8,
+  "trust_signals": 5,
+  "scenarios": 4
+}

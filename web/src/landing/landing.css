@@ -1,0 +1,73 @@
+/* Landing page only. Colours, radii, shadows and timings come from theme/tokens.css. */
+html:has(.landing) { scroll-behavior: smooth; }
+.landing { position: relative; overflow-x: clip; }
+
+/* ---- scroll reveal (JS adds .in; without JS or with reduced motion everything is simply visible) ---- */
+.js .reveal { opacity: 0; transform: translateY(22px) scale(0.985); transition: opacity var(--duration-slow) var(--ease-soft), transform var(--duration-slow) var(--ease-soft); transition-delay: calc(var(--i, 0) * var(--stagger)); }
+.js .reveal.in { opacity: 1; transform: none; }
+
+/* ---- the orb: a soft clay sphere made of gradients ---- */
+.orb {
+  position: relative;
+  width: var(--s, 380px);
+  height: var(--s, 380px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 31% 25%, #ffffff 0, #fbfbf8 18%, #eeeee8 46%, #d6d6cc 78%, #c2c2b6 100%);
+  box-shadow:
+    inset -22px -30px 50px rgb(110 110 90 / 0.28),
+    inset 18px 20px 36px rgb(255 255 255 / 0.95),
+    0 50px 90px -34px rgb(19 19 22 / 0.4),
+    0 18px 40px -22px rgb(19 19 22 / 0.25);
+  will-change: transform;
+}
+.orb::after { /* soft specular highlight */
+  content: ""; position: absolute; left: 17%; top: 11%; width: 34%; height: 24%; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0));
+  filter: blur(6px); transform: rotate(-24deg);
+}
+.orb-wrap { position: relative; display: grid; place-items: center; transform: translate3d(calc(var(--px, 0) * 14px), calc(var(--py, 0) * 10px), 0); transition: transform 0.4s var(--ease-soft); }
+.orb-glow { position: absolute; inset: -22%; border-radius: 50%; background: radial-gradient(circle, rgb(243 246 196 / 0.9) 0, rgb(243 246 196 / 0) 62%); animation: glow 9s ease-in-out infinite; }
+.orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--color-arc); animation: ring 9s ease-in-out infinite; }
+.orb-ring:nth-of-type(2) { animation-delay: -3s; }
+.orb-ring:nth-of-type(3) { animation-delay: -6s; }
+@keyframes glow { 0%, 100% { transform: scale(0.94); opacity: 0.85; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes ring { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
+.orb-bob { animation: var(--animate-float-slow); }
+
+/* ---- intro loader ---- */
+.loader { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: var(--color-base); transition: opacity 520ms var(--ease-soft), transform 520ms var(--ease-soft); }
+.loader.leaving { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.loader .orb { --s: min(46vw, 240px); animation: loaderPulse 1.8s ease-in-out infinite; }
+@keyframes loaderPulse { 0%, 100% { transform: scale(0.96); } 50% { transform: scale(1.02); } }
+.loader-count { font-family: var(--font-mono); font-size: clamp(2.4rem, 8vw, 3.6rem); letter-spacing: -0.05em; color: var(--color-fg); font-variant-numeric: tabular-nums; }
+
+/* hero entrance waits for the loader */
+.landing[data-ready="false"] .hero-anim, .landing[data-ready="false"] .hero-anim > span { animation-play-state: paused; }
+.landing[data-ready="false"] .hero-anim { opacity: 0; }
+
+/* ---- pipeline stepper ---- */
+.pipe { position: relative; height: calc(var(--n) * 58vh + 60vh); }
+.pipe-sticky { position: sticky; top: 0; min-height: 100vh; display: flex; align-items: center; }
+.pipe-bar { height: 4px; border-radius: 999px; background: var(--color-line); overflow: hidden; }
+.pipe-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--color-ink); transform-origin: left; transition: transform var(--duration-base) var(--ease-soft); }
+@media (max-width: 767px) {
+  .pipe { height: calc(var(--n) * 46vh + 60vh); }
+}
+
+/* ---- gallery ---- */
+.shot { aspect-ratio: 800 / 256; width: 100%; object-fit: cover; object-position: top left; background: var(--color-sunken); }
+.lightbox { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgb(19 19 22 / 0.45); backdrop-filter: blur(10px); }
+.lightbox-panel { width: min(1100px, 100%); max-height: calc(100vh - 32px); overflow: auto; }
+
+/* ---- floating glass chips ---- */
+.chip-float { animation: var(--animate-float); }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal { opacity: 1; transform: none; transition: none; }
+  .orb-glow, .orb-ring, .orb-bob, .chip-float, .loader .orb { animation: none; }
+  html:has(.landing) { scroll-behavior: auto; }
+}
+
+/* contrast: muted grey is too light on the grey backdrop */
+.landing .eyebrow { color: var(--color-dim); }

@@ -17,6 +17,8 @@ export function registerWeb(app: FastifyInstance, distDir: string): boolean {
     root: distDir,
     wildcard: false,
     index: ["index.html"],
+    // web/dist ships .br and .gz copies of every text asset (see web/scripts/precompress.mjs); serve them when the browser accepts them
+    preCompressed: true,
     cacheControl: false,
     setHeaders: (reply, filePath) => {
       // hashed assets never change; the HTML shell must always be revalidated

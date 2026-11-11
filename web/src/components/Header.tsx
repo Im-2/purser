@@ -56,7 +56,7 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
   return (
     <header className="sticky top-0 z-40 px-4 pt-3 sm:px-6">
       <div className="glass mx-auto flex min-h-[68px] max-w-[1800px] flex-wrap items-center gap-x-3 gap-y-2 rounded-[34px] px-3 py-2 pl-5 md:flex-nowrap md:py-0">
-        <a href="#/live" className="focus-ring mr-auto shrink-0 rounded-full md:mr-2" aria-label="Purser home">
+        <a href="/app#/live" className="focus-ring mr-auto shrink-0 rounded-full md:mr-2" aria-label="Purser home">
           <Logo size={34} />
         </a>
 

@@ -114,7 +114,7 @@ Each runs in **replay** (a scripted agent, cached AI verdicts: same result every
 
 - Agent API keys are stored hashed; the admin API requires a bearer token (and is disabled if none is set).
 - Reviewer prompts treat agent-supplied strings as untrusted data, delimited and labelled; output is schema-validated.
-- The rule engine is pure and deterministic and has unit tests; there are 537 automated tests in total (510 server, 27 agent).
+- The rule engine is pure and deterministic and has unit tests; there are 539 automated tests in total (510 server, 27 agent).
 - Fail closed everywhere: unknown tool, unknown amount, reviewer error, upstream error before execution.
 - Idempotency: executed calls carry an idempotency key (`PayPal-Request-Id`) and approvals use an atomic claim, so retries cannot double-pay.
 - Webhooks are verified through PayPal's `verify-webhook-signature` endpoint before any reconciliation write; without a configured webhook id they are refused.
@@ -125,7 +125,7 @@ Each runs in **replay** (a scripted agent, cached AI verdicts: same result every
 
 The demo runs on Render's free plan, so it **sleeps when idle: the first request can take up to a minute to wake it.** The disk is ephemeral: each restart resets it to the seeded demo state, which is the intended starting point.
 
-1. Open the live URL (in the Devpost submission). Sign in with the **admin token** given in the Devpost testing instructions (sandbox-only).
+1. Open the live URL (in the Devpost submission): the landing page is at `/` and the dashboard at `/app`. Open the dashboard and sign in with the **admin token** given in the Devpost testing instructions (sandbox-only).
 2. **Attack Lab** > keep **Replay** selected > run **D** (an allowed $120 payout lands in the ledger), then **A** (the poisoned invoice is held).
 3. **Approvals**: open the held payout, read why Purser flagged it, and press **Deny**.
 4. **Live** shows every decision; click a row for the full explanation.
@@ -154,7 +154,7 @@ Prerequisites: Node 22 or newer, and [pnpm](https://pnpm.io) (`corepack enable` 
 
        pnpm dev
 
-   Open http://127.0.0.1:5173 and sign in with your `PURSER_ADMIN_TOKEN`.
+   Open http://127.0.0.1:5173 for the landing page, or http://127.0.0.1:5173/app for the dashboard, and sign in with your `PURSER_ADMIN_TOKEN`.
 5. **Check everything.**
 
        pnpm test
@@ -163,7 +163,7 @@ Prerequisites: Node 22 or newer, and [pnpm](https://pnpm.io) (`corepack enable` 
 
    `demo:verify` starts its own server in replay conditions (no model calls possible), runs all four scenarios and prints a green/red summary. It uses the PayPal sandbox for D, B and C, so it moves a few hundred sandbox dollars. Run `pnpm demo:warm` once against a server with a working LLM key first, to fill the AI verdict cache. Stop `pnpm dev` before `demo:verify` (they share a database).
 
-To serve the built dashboard from the server instead of Vite: `pnpm --filter @purser/web build`, then `pnpm --filter @purser/server start` and open http://127.0.0.1:8799.
+To serve the built dashboard from the server instead of Vite: `pnpm --filter @purser/web build`, then `pnpm --filter @purser/server start` and open http://127.0.0.1:8799 (landing page) or http://127.0.0.1:8799/app (dashboard).
 
 ## Deploying to Render
 
@@ -178,7 +178,7 @@ To serve the built dashboard from the server instead of Vite: `pnpm --filter @pu
 
 All of it, from an empty repository, with Claude Code as the build tool:
 
-- The MCP gateway, the decision pipeline and the pure rules engine, with 537 automated tests.
+- The MCP gateway, the decision pipeline and the pure rules engine, with 539 automated tests.
 - The payee trust signals (including look-alike detection that weighs the local part of an address) and the tighten-only AI reviewer with its verdict cache and replay mode.
 - The plain-English policy compiler with diff and warnings, and versioned policies.
 - Human approvals with exactly-once execution, the kill switch, and the circuit breaker.
@@ -357,12 +357,16 @@ the same database. Set `DEMO_VERIFY_PORT` if 8811 is taken.
 (202, one at a time) and streams progress as `scenario_log` events on `/api/events`; `GET /api/demo/status` shows the current and last run.
 For a guaranteed offline demo start the server with `AI_MODE=cached_only`.
 
-## Dashboard (web)
+## Landing page and dashboard (web)
+
+The public landing page is served at `/` and the dashboard at `/app` (the same build; two separate JS chunks, so a landing visitor never downloads the dashboard). The landing page has no dependency beyond React and the same CSS tokens, shows no credential, respects `prefers-reduced-motion`, and its figures (tests, MCP tools, rules, pipeline stages) are computed from the repo by `pnpm landing:facts`, which writes `web/src/landing/facts.json`. Re-run it after changing tests or tools. `node web/scripts/shoot-landing.mjs` screenshots it at 390, 768 and 1440 px against a running server. The build also writes `.br` and `.gz` copies of every text asset, which the server sends pre-compressed.
+
+### Dashboard
 
 A soft light dashboard (tokens in `web/src/theme/tokens.css`): Live decisions grid with a row-click explanation drawer, Approvals, Attack Lab, Policies (plain-English compiler with a proposal/diff/warnings preview, apply, version history, raw JSON), Reconciliation (findings grid, Run now with the transaction-search status, live SSE highlights), the kill switch with its red frozen banner, a compact Agents bar and a "how this works" modal.
 
 ```bash
-pnpm --filter @purser/web dev      # http://127.0.0.1:5173, proxies /api to the backend port from .env
+pnpm --filter @purser/web dev      # landing page at /, dashboard at /app on http://127.0.0.1:5173, proxies /api to the backend port from .env
 pnpm --filter @purser/web build    # then `pnpm --filter @purser/server start` serves web/dist at /
 pnpm --filter @purser/web verify:ui  # Part A walkthrough against the running backend (moves $120 + $160 of sandbox money)
 pnpm --filter @purser/web verify:ui:b # Policies + Reconciliation (one $5 out-of-band payout; SKIP_OOB=1 skips it)

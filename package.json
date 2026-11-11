@@ -18,7 +18,8 @@
         "demo:verify": "pnpm --filter @purser/agent verify",
         "demo:warm": "pnpm --filter @purser/agent warm",
         "render:env": "node scripts/make-render-env.mjs",
-        "check:env-example": "node scripts/check-env-example.mjs"
+        "check:env-example": "node scripts/check-env-example.mjs",
+        "landing:facts": "pnpm --filter @purser/server landing:facts"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

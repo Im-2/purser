@@ -13,7 +13,8 @@
         "mcp:try": "tsx src/mcp-try.ts",
         "ai:check": "tsx src/ai-check.ts",
         "demo:oob-payout": "tsx src/demo-oob-payout.ts",
-        "ai:export-cache": "tsx src/ai-export-cache.ts"
+        "ai:export-cache": "tsx src/ai-export-cache.ts",
+        "landing:facts": "tsx src/landing-facts.ts"
     },
     "dependencies": {
         "@fastify/static": "^10.1.10",
