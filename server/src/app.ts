@@ -5,9 +5,12 @@ import { registerMcpRoutes } from "./gateway/mcp.js";
 import { registerPolicyRoutes, type AdminDeps } from "./admin/policies.js";
 import { registerAdminApi } from "./admin/api.js";
 import { registerReconciliationRoutes } from "./reconciliation/routes.js";
+import { registerWeb } from "./web.js";
 import type { DemoRunner } from "./admin/demo-run.js";
 
 export interface AppOptions {
+  /** Directory of the built dashboard (web/dist). When it exists it is served at /. */
+  webDist?: string;
   /** When provided, the MCP gateway is mounted at /mcp. */
   gateway?: GatewayDeps;
   /**
@@ -59,6 +62,7 @@ export function buildApp(config: Config, opts: AppOptions = {}): FastifyInstance
       app.addHook("preClose", async () => api.closeStreams());
     } else registerPolicyRoutes(app, rest);
   }
+  if (opts.webDist) registerWeb(app, opts.webDist);
 
   return app;
 }

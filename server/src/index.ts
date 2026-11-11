@@ -1,5 +1,6 @@
 import { loadConfig } from "./config.js";
-import { loadDotEnv, resolveDbPath } from "./env.js";
+import path from "node:path";
+import { loadDotEnv, repoRoot, resolveDbPath } from "./env.js";
 import { buildApp } from "./app.js";
 import { openDb } from "./db/index.js";
 import { createRepos } from "./db/repos.js";
@@ -59,6 +60,7 @@ const demo = createDemoRunner({
 const app = buildApp(config, {
   gateway,
   admin: { repos, llm, adminToken: config.PURSER_ADMIN_TOKEN, gateway, demo },
+  webDist: path.join(repoRoot, "web", "dist"), // the built dashboard, if `pnpm --filter @purser/web build` has been run
 });
 
 // Background sweeper: marks approvals past their expiry as expired and closes their attempts.

@@ -15,4 +15,6 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   { files: ["scripts/**/*.mjs", "*.js"], languageOptions: { globals: nodeGlobals } },
+  // the UI walkthrough also runs callbacks inside the browser page
+  { files: ["web/scripts/**/*.mjs"], languageOptions: { globals: { ...nodeGlobals, document: "readonly", sessionStorage: "readonly", localStorage: "readonly" } } },
 );

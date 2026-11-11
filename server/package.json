@@ -1,29 +1,30 @@
 {
-    "name":  "@purser/server",
-    "version":  "0.1.0",
-    "private":  true,
-    "type":  "module",
-    "scripts":  {
-                    "dev":  "tsx watch src/index.ts",
-                    "start":  "tsx src/index.ts",
-                    "typecheck":  "tsc -p tsconfig.json",
-                    "test":  "vitest run",
-                    "seed":  "tsx src/seed.ts",
-                    "smoke:paypal":  "tsx src/smoke-paypal.ts",
-                    "mcp:try":  "tsx src/mcp-try.ts",
-                    "ai:check":  "tsx src/ai-check.ts",
-                    "demo:oob-payout":  "tsx src/demo-oob-payout.ts"
-                },
-    "dependencies":  {
-                         "@modelcontextprotocol/sdk":  "^1.32.2",
-                         "@purser/shared":  "workspace:*",
-                         "better-sqlite3":  "^13.0.3",
-                         "fastify":  "^5.12.8",
-                         "pino":  "^10.4.0",
-                         "zod":  "^4.6.7",
-                         "@purser/agent":  "workspace:*"
-                     },
-    "devDependencies":  {
-                            "@types/better-sqlite3":  "^9.6.0"
-                        }
+    "name": "@purser/server",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "start": "tsx src/index.ts",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest run",
+        "seed": "tsx src/seed.ts",
+        "smoke:paypal": "tsx src/smoke-paypal.ts",
+        "mcp:try": "tsx src/mcp-try.ts",
+        "ai:check": "tsx src/ai-check.ts",
+        "demo:oob-payout": "tsx src/demo-oob-payout.ts"
+    },
+    "dependencies": {
+        "@fastify/static": "^10.1.10",
+        "@modelcontextprotocol/sdk": "^1.32.2",
+        "@purser/agent": "workspace:*",
+        "@purser/shared": "workspace:*",
+        "better-sqlite3": "^13.0.3",
+        "fastify": "^5.12.8",
+        "pino": "^10.4.0",
+        "zod": "^4.6.7"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^9.6.0"
+    }
 }

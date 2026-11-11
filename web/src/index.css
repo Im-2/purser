@@ -1,2 +1,107 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 
+/* ------------------------------------------------------------------------------------------------------------------
+   Purser design tokens: "mission control". Three-state semantics (allow / escalate / deny) and ONE accent (violet).
+   ------------------------------------------------------------------------------------------------------------------ */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --color-base: #070a0f;
+  --color-sunken: #05080c;
+  --color-panel: #0c1219;
+  --color-raised: #121b26;
+  --color-hover: #172230;
+  --color-line: #1b2633;
+  --color-line-strong: #2b3b4f;
+
+  --color-fg: #e9eff6;
+  --color-dim: #9eacbf;
+  --color-mute: #6a7a8f;
+
+  --color-allow: #3ddc97;
+  --color-escalate: #ffb020;
+  --color-deny: #ff5d6c;
+  --color-accent: #7c6cff;
+  --color-accent-hi: #a99cff;
+
+  --animate-row-in: row-in 2.6s ease-out 1;
+  --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-rise: rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) 1;
+
+  @keyframes row-in {
+    0% { background-color: rgb(124 108 255 / 0.42); box-shadow: inset 3px 0 0 var(--color-accent-hi); }
+    100% { background-color: transparent; box-shadow: inset 3px 0 0 transparent; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 7px transparent; opacity: 0.85; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -240px 0; }
+    100% { background-position: 240px 0; }
+  }
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html, body, #root { height: 100%; }
+html { color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--color-base);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* a faint instrument-panel grid and a soft violet glow at the top */
+  background-image:
+    radial-gradient(1100px 420px at 50% -120px, rgb(124 108 255 / 0.1), transparent 70%),
+    linear-gradient(rgb(255 255 255 / 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.018) 1px, transparent 1px);
+  background-size: auto, 44px 44px, 44px 44px;
+  background-attachment: fixed;
+}
+
+::selection { background: rgb(124 108 255 / 0.45); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 8px; border: 2px solid var(--color-panel); }
+
+/* monospaced numerics everywhere money or counts appear */
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.eyebrow { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-mute); font-weight: 600; }
+
+.panel {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.025), transparent 40%), var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+.focus-ring:focus-visible { outline: 2px solid var(--color-accent-hi); outline-offset: 2px; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-raised) 0, var(--color-hover) 120px, var(--color-raised) 240px);
+  background-size: 480px 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------- AG Grid: dark theme extras ---- */
+.ag-theme-purser { --ag-font-family: var(--font-sans); }
+.ag-theme-purser .ag-row.row-new { animation: var(--animate-row-in); }
+.ag-theme-purser .ag-cell { display: flex; align-items: center; }
+.ag-theme-purser .ag-header-cell-label { text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.66rem; }
+.ag-theme-purser .ag-row { cursor: pointer; }
+.ag-theme-purser .ag-overlay-no-rows-wrapper { background: transparent; }
+
+/* reduced motion: keep the information, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

@@ -169,3 +169,15 @@ the same database. Set `DEMO_VERIFY_PORT` if 8811 is taken.
 **Attack Lab API.** `POST /api/demo/run/:scenario` with `{"mode":"replay"|"live","reset":true}` starts a scenario as a background job
 (202, one at a time) and streams progress as `scenario_log` events on `/api/events`; `GET /api/demo/status` shows the current and last run.
 For a guaranteed offline demo start the server with `AI_MODE=cached_only`.
+
+## Dashboard (web)
+
+A dark "mission control" UI: Live decisions grid with a row-click explanation drawer, Approvals, Attack Lab, the kill switch with its red frozen banner, an Agents panel and a "how this works" modal. The Policies and Reconciliation pages are marked "coming next".
+
+```bash
+pnpm --filter @purser/web dev      # http://127.0.0.1:5173, proxies /api to the backend port from .env
+pnpm --filter @purser/web build    # then `pnpm --filter @purser/server start` serves web/dist at /
+pnpm --filter @purser/web verify:ui  # drives Edge against the running backend and writes docs/screens/*.png
+```
+
+Sign in with `PURSER_ADMIN_TOKEN` from `.env` (kept in sessionStorage only). `verify:ui` moves real sandbox money (scenario D pays $120, the approved escalation pays $160) and denies the look-alike payout.
