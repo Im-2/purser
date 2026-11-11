@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { get } from "./api";
 import { connectEvents, type ConnStatus, type EventName } from "./sse";
 import { useToast } from "./toast";
-import type { AgentInfo, ApprovalItem, Attempt, DemoStatus, ScenarioLog, Stats } from "./types";
+import type { AgentInfo, ApprovalItem, Attempt, DemoStatus, ReconList, ReconFinding, ReconRun, ScenarioLog, Stats } from "./types";
 
 const MAX_ATTEMPTS = 500;
 const MAX_LOGS = 400;
@@ -20,6 +20,13 @@ interface State {
   logs: ScenarioLog[];
   conn: ConnStatus;
   demo: DemoStatus | null;
+  /** reconciliation findings, newest first; reconFresh ids drive the live highlight */
+  recon: ReconFinding[] | null;
+  reconCounts: Record<string, number>;
+  reconFresh: Record<string, true>;
+  reconRun: ReconRun | null;
+  /** bumps on every full refresh (including a demo reset) so pages that cache server data can reload */
+  tick: number;
 }
 
 type Action =
@@ -33,10 +40,14 @@ type Action =
   | { t: "clearLogs" }
   | { t: "conn"; s: ConnStatus }
   | { t: "demo"; d: DemoStatus }
+  | { t: "recon"; list: ReconList }
+  | { t: "reconFresh"; ids: string[] }
+  | { t: "reconUnfresh"; ids: string[] }
+  | { t: "reconRun"; run: ReconRun }
   | { t: "ready" }
   | { t: "error"; message: string };
 
-const initial: State = { ready: false, loadError: null, attempts: [], fresh: {}, approvals: [], agents: [], globalFreeze: false, stats: null, logs: [], conn: "connecting", demo: null };
+const initial: State = { ready: false, loadError: null, attempts: [], fresh: {}, approvals: [], agents: [], globalFreeze: false, stats: null, logs: [], conn: "connecting", demo: null, recon: null, reconCounts: {}, reconFresh: {}, reconRun: null, tick: 0 };
 
 function reduce(s: State, a: Action): State {
   switch (a.t) {
@@ -72,8 +83,19 @@ function reduce(s: State, a: Action): State {
       return { ...s, conn: a.s };
     case "demo":
       return { ...s, demo: a.d };
+    case "recon":
+      return { ...s, recon: a.list.findings, reconCounts: a.list.counts };
+    case "reconFresh":
+      return { ...s, reconFresh: { ...s.reconFresh, ...Object.fromEntries(a.ids.map((id) => [id, true as const])) } };
+    case "reconUnfresh": {
+      const next = { ...s.reconFresh };
+      for (const id of a.ids) delete next[id];
+      return { ...s, reconFresh: next };
+    }
+    case "reconRun":
+      return { ...s, reconRun: a.run };
     case "ready":
-      return { ...s, ready: true, loadError: null };
+      return { ...s, ready: true, loadError: null, tick: s.tick + 1 };
     case "error":
       return { ...s, loadError: a.message, ready: true };
   }
@@ -85,6 +107,8 @@ interface StoreApi {
   refreshApprovals: () => Promise<void>;
   refreshAgents: () => Promise<void>;
   refreshStats: () => Promise<void>;
+  refreshRecon: () => Promise<void>;
+  setReconRun: (run: ReconRun) => void;
   clearLogs: () => void;
 }
 const Ctx = createContext<StoreApi | null>(null);
@@ -115,34 +139,37 @@ export function StoreProvider({ token, children }: { token: string; children: Re
   const refreshStats = useCallback(async () => {
     dispatch({ t: "stats", s: await get<Stats>("/api/stats") });
   }, []);
+  const refreshRecon = useCallback(async () => {
+    dispatch({ t: "recon", list: await get<ReconList>("/api/reconciliation?limit=500") });
+  }, []);
   const refreshDemo = useCallback(async () => {
     dispatch({ t: "demo", d: await get<DemoStatus>("/api/demo/status") });
   }, []);
 
   const refreshAll = useCallback(async () => {
     try {
-      await Promise.all([refreshAttempts(), refreshApprovals(), refreshAgents(), refreshStats(), refreshDemo()]);
+      await Promise.all([refreshAttempts(), refreshApprovals(), refreshAgents(), refreshStats(), refreshDemo(), refreshRecon()]);
       dispatch({ t: "ready" });
     } catch (e) {
       dispatch({ t: "error", message: (e as Error).message });
     }
-  }, [refreshAttempts, refreshApprovals, refreshAgents, refreshStats, refreshDemo]);
+  }, [refreshAttempts, refreshApprovals, refreshAgents, refreshStats, refreshDemo, refreshRecon]);
 
   // Debounced follow-up fetches: a burst of events (a scenario) causes one refresh, not twenty.
   const pending = useRef<Set<string>>(new Set());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const schedule = useCallback(
-    (...kinds: ("stats" | "approvals" | "agents" | "demo")[]) => {
+    (...kinds: ("stats" | "approvals" | "agents" | "demo" | "recon")[]) => {
       kinds.forEach((k) => pending.current.add(k));
       if (timer.current) return;
       timer.current = setTimeout(() => {
         timer.current = null;
         const k = new Set(pending.current);
         pending.current.clear();
-        void Promise.allSettled([k.has("stats") && refreshStats(), k.has("approvals") && refreshApprovals(), k.has("agents") && refreshAgents(), k.has("demo") && refreshDemo()]);
+        void Promise.allSettled([k.has("stats") && refreshStats(), k.has("approvals") && refreshApprovals(), k.has("agents") && refreshAgents(), k.has("demo") && refreshDemo(), k.has("recon") && refreshRecon()]);
       }, 350);
     },
-    [refreshStats, refreshApprovals, refreshAgents, refreshDemo],
+    [refreshStats, refreshApprovals, refreshAgents, refreshDemo, refreshRecon],
   );
 
   useEffect(() => {
@@ -181,8 +208,14 @@ export function StoreProvider({ token, children }: { token: string; children: Re
             if (e.kind === "done" || e.kind === "start") schedule("demo", "approvals", "agents", "stats");
             break;
           }
-          case "reconciliation_finding":
-            break; // the Reconciliation page arrives in part B
+          case "reconciliation_finding": {
+            const f = data as { id: string; finding_type?: string };
+            dispatch({ t: "reconFresh", ids: [f.id] });
+            setTimeout(() => dispatch({ t: "reconUnfresh", ids: [f.id] }), 6000);
+            toastRef.current.push("warn", "New reconciliation finding", (f.finding_type ?? "finding").replace(/_/g, " "));
+            schedule("recon");
+            break;
+          }
         }
       },
     });
@@ -192,6 +225,6 @@ export function StoreProvider({ token, children }: { token: string; children: Re
     };
   }, [token, refreshAll, schedule]);
 
-  const value = useMemo<StoreApi>(() => ({ state, refreshAll, refreshApprovals, refreshAgents, refreshStats, clearLogs: () => dispatch({ t: "clearLogs" }) }), [state, refreshAll, refreshApprovals, refreshAgents, refreshStats]);
+  const value = useMemo<StoreApi>(() => ({ state, refreshAll, refreshApprovals, refreshAgents, refreshStats, refreshRecon, setReconRun: (run: ReconRun) => dispatch({ t: "reconRun", run }), clearLogs: () => dispatch({ t: "clearLogs" }) }), [state, refreshAll, refreshApprovals, refreshAgents, refreshStats, refreshRecon]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

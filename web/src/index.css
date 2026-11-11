@@ -42,6 +42,10 @@ h1, h2, h3 { font-weight: 450; letter-spacing: var(--tracking-display); }
 .glass { background: rgb(253 253 253 / 0.72); backdrop-filter: blur(14px) saturate(1.4); border: 1px solid rgb(255 255 255 / 0.7); box-shadow: var(--shadow-soft); }
 
 .focus-ring:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+/* every interactive element gets a visible keyboard focus, even ones without the .focus-ring class */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.ag-theme-purser .ag-cell-focus, .ag-theme-purser .ag-cell:focus-visible { outline: 2px solid var(--color-ink); outline-offset: -3px; border-radius: 10px; }
+.ag-theme-purser .ag-cell.ag-cell-focus:not(.ag-cell-range-selected) { border-color: transparent !important; }
 
 /* staggered entrance: set style={{ "--i": n }} on children */
 .rise { animation: var(--animate-rise); animation-delay: calc(var(--i, 0) * var(--stagger)); }

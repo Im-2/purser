@@ -169,17 +169,16 @@ try {
   await page.getByText(/Ops agent is frozen|All agents are frozen/).first().waitFor({ state: "detached", timeout: 10000 });
   ok("the per-agent switch unfreezes it", true);
 
-  // ---------- how it works, coming-next pages ----------
+  // ---------- how it works, Part B pages ----------
   await page.getByRole("button", { name: /How this works/ }).click();
   await page.getByText("the pipeline in five steps").waitFor();
   await shot("10-how-it-works");
   await page.keyboard.press("Escape");
   await nav("Policies");
-  await page.getByText("Coming next").waitFor();
-  await shot("11-policies-coming-next");
+  await page.getByRole("heading", { name: "Policies" }).first().waitFor();
   await nav("Reconciliation");
-  await page.getByText("Coming next").waitFor();
-  ok("Policies and Reconciliation are clearly marked as coming next", true);
+  await page.getByRole("heading", { name: "Reconciliation" }).first().waitFor();
+  ok("Policies and Reconciliation pages render (Part B is verified by verify:ui:b)", true);
 
   // ---------- empty states and 1920x1080 ----------
   await page.setViewportSize({ width: 1920, height: 1080 });

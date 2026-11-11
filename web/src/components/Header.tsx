@@ -10,8 +10,8 @@ const NAV: { id: RouteId; label: string; icon: ReactNode; soon?: boolean }[] = [
   { id: "live", label: "Live", icon: <IconPulse size={15} /> },
   { id: "approvals", label: "Approvals", icon: <IconInbox size={15} /> },
   { id: "lab", label: "Attack Lab", icon: <IconFlask size={15} /> },
-  { id: "policies", label: "Policies", icon: <IconSliders size={15} />, soon: true },
-  { id: "reconciliation", label: "Reconciliation", icon: <IconScale size={15} />, soon: true },
+  { id: "policies", label: "Policies", icon: <IconSliders size={15} /> },
+  { id: "reconciliation", label: "Reconciliation", icon: <IconScale size={15} /> },
 ];
 
 function ConnectionPill() {
@@ -35,7 +35,7 @@ export function Rail({ route }: { route: RouteId }) {
           key={n.id}
           onClick={() => navigate(n.id)}
           aria-label={n.label}
-          title={n.label + (n.soon ? " (coming next)" : "")}
+          title={n.label}
           className={`focus-ring grid size-10 place-items-center rounded-full transition duration-[var(--duration-fast)] ${route === n.id ? "bg-lime text-fg shadow-soft" : "text-mute hover:bg-hover hover:text-fg"}`}
         >
           {n.icon}
@@ -73,7 +73,6 @@ export function Header({ route, onHow, onLogout }: { route: RouteId; onHow: () =
                 <span className={active ? "text-fg" : "text-mute"}>{n.icon}</span>
                 {n.label}
                 {n.id === "approvals" && pending > 0 && <span className="num grid min-w-5 place-items-center rounded-full bg-escalate px-1.5 text-[11px] font-semibold leading-5 text-white">{pending}</span>}
-                {n.soon && <span className="rounded-full border border-line-strong px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-mute">soon</span>}
               </button>
             );
           })}

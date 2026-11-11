@@ -110,3 +110,62 @@ export interface DemoStatus {
   running: { run_id: string; scenario: string; mode: "replay" | "live"; started_at: string } | null;
   last: { run_id: string; scenario: string; mode: string; started_at: string; duration_ms: number; decisions: string[]; agent_frozen: boolean; pending_approvals: string[]; error?: string } | null;
 }
+
+// ---------------------------------------------------------------- policies
+export interface PolicyDiffEntry {
+  path: string;
+  change: "added" | "removed" | "changed";
+  before: unknown;
+  after: unknown;
+}
+export interface PolicyWarning {
+  code: string;
+  level: "warning" | "info";
+  message: string;
+}
+export type PolicyDoc = Record<string, unknown>;
+export interface CompileResult {
+  policy: PolicyDoc;
+  warnings: PolicyWarning[];
+  diff: PolicyDiffEntry[];
+  unsupported: string[];
+  model: string;
+  latency_ms: number;
+}
+export interface PolicyHistoryRow {
+  id: string;
+  version: number;
+  active: boolean;
+  source_text: string | null;
+  created_at: string;
+}
+export interface PolicyState {
+  active: PolicyDoc | null;
+  history: PolicyHistoryRow[];
+}
+
+// ---------------------------------------------------------------- reconciliation
+export type FindingType = "unrecorded_movement" | "amount_mismatch" | "duplicate" | "payout_denied_or_unclaimed";
+export interface ReconFinding {
+  id: string;
+  ts: string;
+  matched: boolean;
+  finding_type: FindingType | null;
+  ledger_id: string | null;
+  paypal_event_id: string | null;
+  event_type: string | null;
+  detail: Record<string, unknown>;
+}
+export interface ReconList {
+  counts: Record<string, number>;
+  findings: ReconFinding[];
+}
+export type SearchStatus = "ok" | "lagging" | "unavailable" | "skipped";
+export interface ReconRun {
+  ran_at: string;
+  since: string;
+  ledger: { checked: number; matched: number; errors: string[] };
+  transaction_search: { status: SearchStatus; note: string; transactions_seen?: number; outgoing_seen?: number; lag_minutes?: number };
+  matched: number;
+  findings: { id: string; finding_type: FindingType; detail: Record<string, unknown> }[];
+}

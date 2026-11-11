@@ -10,9 +10,12 @@ import { StoreProvider, useStore } from "./lib/store";
 import { ToastProvider } from "./lib/toast";
 import { ApprovalsPage } from "./pages/Approvals";
 import { AttackLabPage } from "./pages/AttackLab";
-import { ComingNextPage } from "./pages/ComingNext";
+import { PoliciesPage } from "./pages/Policies";
+import { ReconciliationPage } from "./pages/Reconciliation";
 import { LivePage } from "./pages/Live";
 import { LoginPage } from "./pages/Login";
+
+const PAGE_TITLE = { live: "Live decisions", approvals: "Approvals", lab: "Attack Lab", policies: "Policies", reconciliation: "Reconciliation" } as const;
 
 function LoadError() {
   const { state, refreshAll } = useStore();
@@ -30,6 +33,9 @@ function LoadError() {
 function Shell({ onLogout }: { onLogout: () => void }) {
   const route = useRoute();
   const [how, setHow] = useState(false);
+  useEffect(() => {
+    document.title = `${PAGE_TITLE[route]} | Purser`;
+  }, [route]);
   return (
     <DrawerProvider>
       <Backdrop />
@@ -41,8 +47,8 @@ function Shell({ onLogout }: { onLogout: () => void }) {
       {route === "live" && <LivePage />}
       {route === "approvals" && <ApprovalsPage />}
       {route === "lab" && <AttackLabPage />}
-      {route === "policies" && <ComingNextPage which="policies" />}
-      {route === "reconciliation" && <ComingNextPage which="reconciliation" />}
+      {route === "policies" && <PoliciesPage />}
+      {route === "reconciliation" && <ReconciliationPage />}
       </div>
       <HowItWorks open={how} onClose={() => setHow(false)} />
     </DrawerProvider>

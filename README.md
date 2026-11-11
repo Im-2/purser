@@ -172,12 +172,13 @@ For a guaranteed offline demo start the server with `AI_MODE=cached_only`.
 
 ## Dashboard (web)
 
-A dark "mission control" UI: Live decisions grid with a row-click explanation drawer, Approvals, Attack Lab, the kill switch with its red frozen banner, an Agents panel and a "how this works" modal. The Policies and Reconciliation pages are marked "coming next".
+A soft light dashboard (tokens in `web/src/theme/tokens.css`): Live decisions grid with a row-click explanation drawer, Approvals, Attack Lab, Policies (plain-English compiler with a proposal/diff/warnings preview, apply, version history, raw JSON), Reconciliation (findings grid, Run now with the transaction-search status, live SSE highlights), the kill switch with its red frozen banner, a compact Agents bar and a "how this works" modal.
 
 ```bash
 pnpm --filter @purser/web dev      # http://127.0.0.1:5173, proxies /api to the backend port from .env
 pnpm --filter @purser/web build    # then `pnpm --filter @purser/server start` serves web/dist at /
-pnpm --filter @purser/web verify:ui  # drives Edge against the running backend and writes docs/screens/*.png
+pnpm --filter @purser/web verify:ui  # Part A walkthrough against the running backend (moves $120 + $160 of sandbox money)
+pnpm --filter @purser/web verify:ui:b # Policies + Reconciliation (one $5 out-of-band payout; SKIP_OOB=1 skips it)
 ```
 
 Sign in with `PURSER_ADMIN_TOKEN` from `.env` (kept in sessionStorage only). `verify:ui` moves real sandbox money (scenario D pays $120, the approved escalation pays $160) and denies the look-alike payout.

@@ -1,40 +1,13 @@
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type GridApi, type GridReadyEvent, type ICellRendererParams } from "ag-grid-community";
+import { type ColDef, type GridApi, type GridReadyEvent, type ICellRendererParams } from "ag-grid-community";
 import { useEffect, useMemo, useRef } from "react";
 import { STAGE_LABEL, clock, label, money } from "../lib/format";
 import type { Attempt, Decision } from "../lib/types";
 import { DecisionChip, RiskMeter, SignalChip, StageChip } from "./Chips";
 import { IconShield } from "./icons";
 import { navigate } from "../lib/route";
+import { purserTheme } from "../lib/gridTheme";
 import { Button } from "./ui";
-
-ModuleRegistry.registerModules([AllCommunityModule]);
-
-/** AG Grid Theming API: Quartz (light), white rows, hairline borders, colours read from the token file via CSS variables. */
-export const purserTheme = themeQuartz.withParams({
-  backgroundColor: "var(--color-panel)",
-  foregroundColor: "var(--color-fg)",
-  borderColor: "var(--color-line)",
-  headerBackgroundColor: "var(--color-panel)",
-  headerTextColor: "var(--color-mute)",
-  headerFontWeight: 500,
-  oddRowBackgroundColor: "var(--color-panel)",
-  rowHoverColor: "var(--color-hover)",
-  selectedRowBackgroundColor: "var(--color-lime)",
-  accentColor: "var(--color-ink)",
-  fontFamily: "Inter Tight Variable, ui-sans-serif, system-ui, sans-serif",
-  fontSize: 14,
-  headerFontSize: 11,
-  rowBorder: { color: "var(--color-line)", width: 1 },
-  headerRowBorder: { color: "var(--color-line)", width: 1 },
-  columnBorder: false,
-  wrapperBorder: false,
-  wrapperBorderRadius: 0,
-  spacing: 7,
-  inputBackgroundColor: "var(--color-sunken)",
-  menuBackgroundColor: "var(--color-panel)",
-  borderRadius: 12,
-});
 
 const mono = "font-mono";
 
@@ -143,7 +116,6 @@ export function AttemptsGrid({ rows, fresh, decision, quick, onOpen }: Props) {
         rowHeight={52}
         headerHeight={42}
         animateRows
-        suppressCellFocus
         rowClassRules={{ "row-new": (p) => Boolean(p.data && freshRef.current[p.data.id]) }}
         quickFilterText={quick}
         isExternalFilterPresent={() => decisionRef.current !== "all"}
@@ -153,6 +125,10 @@ export function AttemptsGrid({ rows, fresh, decision, quick, onOpen }: Props) {
           api.current = e.api;
         }}
         onRowClicked={(e) => e.data && onOpen(e.data.id)}
+        onCellKeyDown={(e) => {
+          const k = (e.event as KeyboardEvent | null)?.key;
+          if (k === "Enter" && e.data) onOpen(e.data.id);
+        }}
       />
     </div>
   );
