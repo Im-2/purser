@@ -52,8 +52,10 @@ try {
   await page.screenshot({ path: path.join(shots, `25-demo-signin${TAG}.png`) });
 
   await btn.click();
+  await page.getByRole("heading", { name: "Attack Lab" }).waitFor({ timeout: 90000 });
+  ok("Try the demo signs in with no token and lands on the Attack Lab", true);
+  await page.getByRole("button", { name: "Live", exact: true }).first().click();
   await page.getByText("Live decisions").waitFor({ timeout: 40000 });
-  ok("Try the demo signs in with no token", true);
   ok('the "Demo mode: replay, no real money" badge is shown', await page.getByText("Demo mode: replay, no real money").isVisible());
   ok("the admin-token link is shown", await page.getByRole("button", { name: /Sign in with admin token for full access/ }).isVisible());
   demoToken = await page.evaluate(() => sessionStorage.getItem("purser_admin_token"));
