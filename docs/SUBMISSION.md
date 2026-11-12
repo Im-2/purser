@@ -58,7 +58,7 @@ An Attack Lab runs four scenarios from the dashboard: a poisoned invoice, struct
 
 ## What's next
 
-- Approvals by chat (Telegram or Slack). Approvals are web-only today.
+- Approval notifications by chat or email. Approvals are web-only today.
 - Per-agent and per-category limits, and policy tests you can run before applying.
 - A persistent database for hosted use, and multi-user accounts with roles.
 - More payment rails and live-mode review of every rule default before touching production money.

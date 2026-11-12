@@ -19,7 +19,8 @@
         "demo:warm": "pnpm --filter @purser/agent warm",
         "render:env": "node scripts/make-render-env.mjs",
         "check:env-example": "node scripts/check-env-example.mjs",
-        "landing:facts": "pnpm --filter @purser/server landing:facts"
+        "landing:facts": "pnpm --filter @purser/server landing:facts",
+        "demo:loop": "node scripts/demo-loop.mjs"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

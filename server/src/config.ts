@@ -17,8 +17,6 @@ export const EnvSchema = z.object({
   PUBLIC_URL: z.preprocess(emptyToUndef, z.string().url().default("http://127.0.0.1:8799")),
   PORT: z.preprocess(emptyToUndef, z.coerce.number().int().min(1).max(65535).default(8799)),
   DATABASE_PATH: z.preprocess(emptyToUndef, z.string().default("./data/purser.db")),
-  TELEGRAM_BOT_TOKEN: optStr,
-  TELEGRAM_CHAT_ID: optStr,
   AGENT_API_KEY: optStr,
   // AI layer (provider-agnostic). Groq, Gemini, OpenRouter etc. use LLM_PROVIDER=openai_compat.
   LLM_PROVIDER: z.preprocess(emptyToUndef, z.enum(["anthropic", "openai_compat"]).optional()),

@@ -7,6 +7,7 @@ const nodeGlobals = {
   Buffer: "readonly",
   URL: "readonly",
   setTimeout: "readonly",
+  fetch: "readonly",
   clearTimeout: "readonly",
 };
 

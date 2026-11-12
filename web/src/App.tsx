@@ -19,10 +19,17 @@ const PAGE_TITLE = { live: "Live decisions", approvals: "Approvals", lab: "Attac
 
 function LoadError() {
   const { state, refreshAll } = useStore();
+  const failed = Boolean(state.loadError);
+  // the free instance may be waking up (or restarted): keep trying quietly until it answers
+  useEffect(() => {
+    if (!failed) return;
+    const t = setInterval(() => void refreshAll(), 4000);
+    return () => clearInterval(t);
+  }, [failed, refreshAll]);
   if (!state.loadError) return null;
   return (
     <div role="alert" className="mx-4 mt-3 rounded-full border border-escalate-line bg-escalate-soft px-6 py-2.5 text-center text-[13px] text-escalate">
-      Could not load data: {state.loadError}{" "}
+      Waking up or reconnecting to the server, retrying automatically ({state.loadError}){" "}
       <button onClick={() => void refreshAll()} className="ml-2 font-semibold underline underline-offset-2">
         Retry
       </button>

@@ -13,19 +13,35 @@ export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
   const [notice] = useState(takeLoginNotice);
 
   const [demoError, setDemoError] = useState<string | null>(null);
+  const [waking, setWaking] = useState(false);
   const tryDemo = async () => {
     setDemoBusy(true);
     setDemoError(null);
+    setWaking(false);
     try {
-      const r = await api<{ token: string }>("POST", "/api/demo-session", {}, "");
-      setToken(r.token);
-      setRole("demo");
-      onLogin(r.token);
+      // the free hosting sleeps when idle: a 502/503 or a dropped connection while it wakes is retried for about a minute
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const r = await api<{ token: string }>("POST", "/api/demo-session", {}, "");
+          setToken(r.token);
+          setRole("demo");
+          window.location.hash = "/lab"; // a judge's first stop is the Attack Lab
+          onLogin(r.token);
+          return;
+        } catch (err) {
+          const e2 = err as ApiError;
+          const waking = e2.status === 0 || e2.status === 502 || e2.status === 504 || (e2.status === 503 && e2.code !== "demo_unavailable");
+          if (!waking || attempt >= 20) throw err;
+          setWaking(true);
+          await new Promise((res) => setTimeout(res, 3000));
+        }
+      }
     } catch (err) {
       const e2 = err as ApiError;
-      setDemoError(e2.status === 429 ? "Too many demo sessions from your network just now. Try again in a few minutes." : e2.status === 503 ? "Demo mode is not available on this server." : e2.message);
+      setDemoError(e2.status === 429 ? "Too many demo sessions from your network just now. Try again in a few minutes." : e2.status === 503 ? "Demo mode is not available on this server." : e2.status === 0 || e2.status === 502 || e2.status === 504 ? "The server is still waking up. Please try again in a moment." : e2.message);
     } finally {
       setDemoBusy(false);
+      setWaking(false);
     }
   };
 
@@ -114,6 +130,11 @@ export function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
             <Button type="button" tone="ghost" busy={demoBusy} onClick={tryDemo} className="mt-3 w-full">
               Try the demo
             </Button>
+            {waking && (
+              <p role="status" className="mt-2.5 text-[13px] text-dim">
+                Waking up the server. The free instance sleeps when idle and takes up to a minute to start. Hang on...
+              </p>
+            )}
             {demoError && (
               <p role="alert" className="mt-2.5 text-[13px] text-deny">
                 {demoError}

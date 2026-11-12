@@ -83,7 +83,7 @@ export async function api<T = unknown>(method: "GET" | "POST", path: string, bod
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch {
-    throw new ApiError("Could not reach the Purser server. Is it running?", 0, "network", null);
+    throw new ApiError("Could not reach the Purser server. If it was idle it may be waking up; this can take up to a minute.", 0, "network", null);
   }
   const text = await res.text();
   let json: unknown;

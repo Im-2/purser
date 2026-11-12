@@ -39,7 +39,7 @@ export function AgentsPanel() {
       {!state.ready && state.agents.length === 0 && <Skeleton className="h-12 w-72" />}
       {state.ready && state.agents.length === 0 && (
         <p className="rounded-full border border-line-strong bg-panel px-4 py-2 text-sm text-dim shadow-soft min-[1700px]:rounded-[22px] min-[1700px]:border-0 min-[1700px]:bg-transparent min-[1700px]:py-4 min-[1700px]:shadow-none">
-          No agents yet. Seed one with <span className="num text-fg">pnpm --filter @purser/server seed</span>.
+          No agents yet.
         </p>
       )}
 

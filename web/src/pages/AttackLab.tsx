@@ -17,6 +17,12 @@ const SCENARIOS: { id: Id; title: string; line: string; expect: string[]; money:
   { id: "C", title: "Runaway loop", line: "The same refund repeated until velocity limits and the circuit breaker step in.", expect: ["Velocity denies the loop", "Agent frozen by the breaker"], money: "Refunds $3 on a real sandbox capture", tone: "deny" },
   { id: "D", title: "Happy path", line: "A legitimate $120 invoice from an allowlisted vendor.", expect: ["Allowed in about a second", "Lands in the ledger"], money: "Sends $120 in the sandbox", tone: "allow" },
 ];
+const VERDICT: Record<Id, { text: string; cls: string }> = {
+  A: { text: "Result: held for a human", cls: "border-escalate-line bg-escalate-soft text-escalate" },
+  B: { text: "Result: blocked after two payouts", cls: "border-deny-line bg-deny-soft text-deny" },
+  C: { text: "Result: blocked, agent frozen", cls: "border-deny-line bg-deny-soft text-deny" },
+  D: { text: "Result: allowed", cls: "border-allow-line bg-allow-soft text-allow" },
+};
 const TONE_BAR = { escalate: "bg-escalate", deny: "bg-deny", allow: "bg-allow" } as const;
 
 function logTone(e: ScenarioLog): string {
@@ -79,7 +85,8 @@ function DecisionCard({ a }: { a: Attempt }) {
 export function AttackLabPage() {
   const { state, clearLogs } = useStore();
   const actions = useActions();
-  const [selected, setSelected] = useState<Id>("D");
+  const demo = isDemo();
+  const [selected, setSelected] = useState<Id>(demo ? "A" : "D");
   const [mode, setMode] = useState<"replay" | "live">("replay");
   const [resetFirst, setResetFirst] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -133,6 +140,15 @@ export function AttackLabPage() {
         <p className="text-sm text-dim">Run a scenario and watch both sides at once: what the agent does, and what Purser decides.</p>
       </div>
 
+      {demo && (
+        <ol className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-[22px] border border-lime-line bg-lime-soft px-5 py-3 text-[13px] text-dim" aria-label="Quick start">
+          <li className="font-medium text-fg">Start here:</li>
+          <li><b className="font-medium text-fg">1.</b> pick a scenario and press <b className="font-medium text-fg">Run</b></li>
+          <li><b className="font-medium text-fg">2.</b> watch the agent (left) and Purser&apos;s decision (right)</li>
+          <li><b className="font-medium text-fg">3.</b> A is held for you: open <b className="font-medium text-fg">Approvals</b> and press Deny</li>
+          <li><b className="font-medium text-fg">4.</b> try B and C, then the <b className="font-medium text-fg">Kill switch</b></li>
+        </ol>
+      )}
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Scenarios" role="radiogroup">
         {SCENARIOS.map((s) => {
           const on = s.id === selected;
@@ -151,6 +167,7 @@ export function AttackLabPage() {
                   <span className={`size-1.5 rounded-full ${TONE_BAR[s.tone]}`} />
                 </span>
                 <span className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-dim">{s.line}</span>
+                <span className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${VERDICT[s.id].cls}`}>{VERDICT[s.id].text}</span>
               </span>
             </button>
           );
@@ -167,7 +184,7 @@ export function AttackLabPage() {
                 {x}
               </span>
             ))}
-            <span className="text-[12px] text-mute">· {sel.money}</span>
+            <span className="text-[12px] text-mute">· {demo ? "Simulated: no money moves" : sel.money}</span>
           </div>
         </div>
         <div>
@@ -195,6 +212,15 @@ export function AttackLabPage() {
           </Button>
         </div>
       </section>
+      {finished && !pendingFromRun && decisions.length > 0 && (
+        <div role="status" className={`rise mt-3 flex flex-wrap items-center gap-3 rounded-[22px] border px-5 py-2.5 ${decisions.some((d) => d.decision === "deny") ? "border-deny-line bg-deny-soft" : decisions.some((d) => d.decision === "escalate") ? "border-escalate-line bg-escalate-soft" : "border-allow-line bg-allow-soft"}`}>
+          <p className="text-sm text-fg">
+            <b className="font-medium">Result: </b>
+            {decisions.filter((d) => d.decision === "allow").length} allowed, {decisions.filter((d) => d.decision === "escalate").length} held for a human, {decisions.filter((d) => d.decision === "deny").length} blocked
+            {decisions.some((d) => d.decision === "deny") ? ". Purser stopped it before more money moved." : "."}
+          </p>
+        </div>
+      )}
       {finished && pendingFromRun && (
         <div role="status" className="rise mt-3 flex flex-wrap items-center gap-3 rounded-[22px] border border-escalate-line bg-escalate-soft px-5 py-2.5">
           <IconAlert size={18} className="text-escalate" />

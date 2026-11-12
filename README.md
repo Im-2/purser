@@ -3,7 +3,7 @@
 **A spending firewall for AI agents on PayPal.** An agent gets a PayPal account; Purser sits in front of it and decides, for every money-touching tool call, whether to allow it, hold it for a human, or block it, before any money moves.
 Hard rules decide first, then payee trust checks, then an AI reviewer that can only make a decision stricter, never looser.
 
-> Built for the PayPal AI Hackathon. **Sandbox only: no live PayPal credentials anywhere.** License: MIT.
+> Built for the PayPal AI Hackathon. **Sandbox only: no live PayPal credentials anywhere.** License: [MIT](LICENSE).
 
 ## The problem
 
@@ -37,6 +37,7 @@ flowchart LR
         ADM["/api admin + SSE<br/>admin token"]
         WH["/webhooks/paypal<br/>signature verified"]
         REC["Reconciliation"]
+        DW["Demo worlds (one per judge)<br/>simulated PayPal, replay only"]
     end
     subgraph PayPal["PayPal sandbox"]
         MCP["@paypal/mcp<br/>(stdio child process)"]
@@ -53,6 +54,7 @@ flowchart LR
     P --> AP
     UI <--> ADM
     ADM --> DB
+    ADM -. demo token .-> DW
     REST -- webhooks --> WH --> REC --> DB
     REC -- Run now --> REST
 ```
@@ -122,6 +124,10 @@ Each runs in **replay** (a scripted agent, cached AI verdicts: same result every
 - Judge demo sessions are isolated, simulated and replay-only, and restricted by a server-side allowlist (see below).
 - Responses to agents never reveal thresholds or allowlists.
 
+## Tech stack
+
+TypeScript everywhere. **Server:** Node 22, Fastify, SQLite (`better-sqlite3`), zod, the Model Context Protocol SDK (`@modelcontextprotocol/sdk`). **PayPal:** sandbox REST APIs and `@paypal/mcp`. **AI:** Groq with `openai/gpt-oss-120b` through an OpenAI-compatible client. **Dashboard and landing page:** React, Vite, Tailwind CSS, AG Grid Community (the decision and reconciliation grids). **Hosting:** Render (one web service, Blueprint in `render.yaml`). **Tests:** vitest, 565 automated tests (538 server, 27 agent); the dashboard is verified end to end with Playwright against a running server.
+
 ## Try the hosted demo (for judges)
 
 **No token needed.** The demo runs on Render's free plan, so it sleeps when idle: the first request can take up to a minute to wake it.
@@ -173,7 +179,7 @@ Prerequisites: Node 22 or newer, and [pnpm](https://pnpm.io) (`corepack enable` 
        pnpm typecheck
        pnpm demo:verify
 
-   `demo:verify` starts its own server in replay conditions (no model calls possible), runs all four scenarios and prints a green/red summary. It uses the PayPal sandbox for D, B and C, so it moves a few hundred sandbox dollars. Run `pnpm demo:warm` once against a server with a working LLM key first, to fill the AI verdict cache. Stop `pnpm dev` before `demo:verify` (they share a database).
+   `demo:verify` starts its own server in replay conditions (no model calls possible), runs all four scenarios and prints a green/red summary. It uses the PayPal sandbox for D, B and C, so it moves a few hundred sandbox dollars. Run `pnpm demo:warm` once against a server with a working LLM key first, to fill the AI verdict cache. Stop `pnpm dev` before `demo:verify` (they share a database). `pnpm demo:loop 5` (against a running server) opens five fresh zero-money demo sessions in a row and runs all four scenarios in each: a free reliability check.
 
 To serve the built dashboard from the server instead of Vite: `pnpm --filter @purser/web build`, then `pnpm --filter @purser/server start` and open http://127.0.0.1:8799 (landing page) or http://127.0.0.1:8799/app (dashboard).
 
@@ -198,18 +204,19 @@ All of it, from an empty repository, with Claude Code as the build tool:
 - The Attack Lab: a scripted demo agent, a live LLM agent, four scenarios, and `pnpm demo:verify`.
 - The dashboard: Live decisions (AG Grid), Approvals, Attack Lab, Policies, Reconciliation, the kill switch, and a design-token system for restyling.
 - Deployment to Render: the Blueprint, ephemeral-disk bootstrapping, the shipped AI verdict cache.
+- A public landing page, and judge demo mode: private, simulated, replay-only sessions behind a server-side allowlist.
 
 ## Limitations and what's next
 
 - **Sandbox only.** Nothing here has been run against live PayPal. Going live would need review of every rule default and a proper threat model.
-- **Telegram approvals were not built.** Approvals happen in the web dashboard only. (`TELEGRAM_*` variables exist in `.env.example` but are unused.)
-- **One admin token, one process.** There are no user accounts, roles or per-tenant isolation, and the server is a single process on SQLite. The Render free plan sleeps when idle and wipes its disk on restart, so approvals, attempts and findings do not persist there.
+- **Approvals are web-only.** Held calls are decided in the dashboard's Approvals page; there is no chat or email notification.
+- **One admin token, one process.** There are no user accounts or per-tenant isolation for the real system. Access is the admin token or a judge demo session (see above), and the server is a single process on SQLite. The Render free plan sleeps when idle and wipes its disk on restart, so approvals, attempts and findings do not persist there.
 - **The AI reviewer is a safety net, not the control.** It only tightens, but it can be wrong in both directions (false escalations cost a human click). The rules, caps and kill switch are what actually bound the damage.
 - **Look-alike detection is heuristic** (edit distance on the local part, name and source mismatch). A determined attacker with a plausible new domain and a clean story would need the allowlist to stop them.
 - **Policy compiler gaps.** It can only express what the policy schema can (for example, it cannot enforce a separate limit for refunds or a per-category limit), and it says so in the warnings rather than pretending.
 - **Reconciliation depends on PayPal.** Sandbox Transaction Search can lag by hours, and a demo reset clears the ledger, so earlier demo payouts can later be reported as unrecorded.
 - **Live agent mode** depends on the model provider's rate limits.
-- **Next:** approvals by chat (Telegram or Slack), per-agent and per-category limits, a persistent database for hosted use, more payment rails, and policy tests you can run before applying.
+- **Next:** approval notifications by chat or email, per-agent and per-category limits, a persistent database for hosted use, more payment rails, and policy tests you can run before applying.
 
 ---
 
